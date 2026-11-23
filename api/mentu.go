@@ -121,6 +121,16 @@ func GetMenus(c *gin.Context) {
 				},
 			},
 		},
+		{
+			Path:      "/relay",
+			Component: "Layout",
+			Redirect:  "/relay/manager",
+			Name:      "relay",
+			Meta: Meta{Title: "relayManagement", Icon: "relay", Roles: []string{"ADMIN"}},
+			Children: []Child{
+				{Path: "manager", Component: "relay/index", Name: "RelayManager", Meta: Meta{Title: "relayManagement", Icon: "relay", Roles: []string{"ADMIN"}, KeepAlive: true}},
+			},
+		},
 	}
 	c.JSON(200, gin.H{
 		"code": "00000",
