@@ -89,6 +89,16 @@ func safeFilePath(filename string) (string, error) {
 	if finalCleanPath == baseTemplateDir {
 		return "", errors.New("文件名无效或指向根目录本身")
 	}
+	// Lstat inspects the directory entry itself instead of following a symlink.
+	// Template operations must only touch regular files directly in this folder.
+	info, err := os.Lstat(finalCleanPath)
+	if err == nil {
+		if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
+			return "", errors.New("模板路径必须是普通文件")
+		}
+	} else if !os.IsNotExist(err) {
+		return "", errors.New("无法检查模板文件")
+	}
 
 	return finalCleanPath, nil
 }

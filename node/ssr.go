@@ -78,7 +78,10 @@ func DecodeSSRURL(s string) (Ssr, error) {
 				paramMap[parts[0]] = parts[1]
 			}
 		} else {
-			q := strings.Split(query, "=")
+			q := strings.SplitN(query, "=", 2)
+			if len(q) != 2 {
+				return Ssr{}, errors.New("invalid ShadowsocksR query")
+			}
 			paramMap[q[0]] = q[1]
 		}
 		remarks = Base64Decode(paramMap["remarks"])
@@ -106,7 +109,6 @@ func DecodeSSRURL(s string) (Ssr, error) {
 		remarks = server + ":" + strconv.Itoa(port)
 	}
 	if CheckEnvironment() {
-		fmt.Println("password", password)
 		fmt.Println("obfs", obfs)
 		fmt.Println("method", method)
 		fmt.Println("protocol", protocol)

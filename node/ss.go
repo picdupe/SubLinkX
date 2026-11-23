@@ -2,7 +2,6 @@ package node
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -30,15 +29,16 @@ func parsingSS(s string) (string, string, string) {
 	*/
 	u, err := url.Parse(s)
 	if err != nil {
-		log.Println("ss url parse fail.", err)
 		return "", "", ""
 	}
 	if u.Scheme != "ss" {
-		log.Println("ss url parse fail, not ss url.")
 		return "", "", ""
 	}
 	// 处理url全编码的情况
 	if u.User == nil {
+		if !strings.HasPrefix(strings.ToLower(s), "ss://") {
+			return "", "", ""
+		}
 		// 截取ss://后的字符串
 		raw := s[5:]
 		s = "ss://" + Base64Decode(raw)
@@ -104,12 +104,10 @@ func DecodeSSURL(s string) (Ss, error) {
 	}
 	// 开发环境输出结果
 	if CheckEnvironment() {
-		fmt.Println("Param:", Base64Decode(param))
 		fmt.Println("Server", server)
 		fmt.Println("Port", port)
 		fmt.Println("Name:", name)
 		fmt.Println("Cipher:", cipher)
-		fmt.Println("Password:", password)
 	}
 	// 返回结果
 	return Ss{

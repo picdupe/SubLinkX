@@ -3,7 +3,6 @@ package node
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -46,7 +45,7 @@ func CallVmessURL() {
 func EncodeVmessURL(v Vmess) string {
 	// 如果备注为空，则使用服务器地址+端口
 	if v.Ps == "" {
-		v.Ps = v.Add + ":" + v.Port.(string)
+		v.Ps = v.Add + ":" + fmt.Sprint(v.Port)
 	}
 	// 如果版本为空，则默认为2
 	if v.V == "" {
@@ -58,8 +57,8 @@ func EncodeVmessURL(v Vmess) string {
 
 // vmess 解码
 func DecodeVMESSURL(s string) (Vmess, error) {
-	if !strings.Contains(s, "vmess://") {
-		return Vmess{}, fmt.Errorf("非vmess协议:%s", s)
+	if !strings.HasPrefix(strings.ToLower(s), "vmess://") {
+		return Vmess{}, fmt.Errorf("unsupported VMess URL scheme")
 	}
 	param := strings.Split(s, "://")[1]
 	param = Base64Decode(strings.TrimSpace(param))
@@ -67,21 +66,19 @@ func DecodeVMESSURL(s string) (Vmess, error) {
 	var vmess Vmess
 	err := json.Unmarshal([]byte(param), &vmess)
 	if err != nil {
-		log.Println(err)
-		return Vmess{}, fmt.Errorf("json格式化失败:%s", param)
+		return Vmess{}, fmt.Errorf("invalid VMess payload")
 	}
 	if vmess.Scy == "" {
 		vmess.Scy = "auto"
 	}
 	// 如果备注为空，则使用服务器地址+端口
 	if vmess.Ps == "" {
-		vmess.Ps = vmess.Add + ":" + vmess.Port.(string)
+		vmess.Ps = vmess.Add + ":" + fmt.Sprint(vmess.Port)
 	}
 	if CheckEnvironment() {
 		fmt.Println("服务器地址", vmess.Add)
 		fmt.Println("端口", vmess.Port)
 		fmt.Println("path", vmess.Path)
-		fmt.Println("uuid", vmess.Id)
 		fmt.Println("alterId", vmess.Aid)
 		fmt.Println("cipher", vmess.Scy)
 		fmt.Println("client-fingerprint", vmess.Fp)

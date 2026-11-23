@@ -24,10 +24,13 @@ type Tuic struct {
 func DecodeTuicURL(s string) (Tuic, error) {
 	u, err := url.Parse(s)
 	if err != nil {
-		return Tuic{}, fmt.Errorf("解析失败的URL: %s", s)
+		return Tuic{}, fmt.Errorf("invalid TUIC URL")
 	}
 	if u.Scheme != "tuic" {
-		return Tuic{}, fmt.Errorf("非tuic协议: %s", s)
+		return Tuic{}, fmt.Errorf("unsupported TUIC URL scheme")
+	}
+	if u.User == nil {
+		return Tuic{}, fmt.Errorf("TUIC URL has no credentials")
 	}
 
 	uuid := u.User.Username()
@@ -51,11 +54,9 @@ func DecodeTuicURL(s string) (Tuic, error) {
 		name = server + ":" + u.Port()
 	}
 	if CheckEnvironment() {
-		fmt.Println("password:", password)
 		fmt.Println("server:", server)
 		fmt.Println("port:", port)
 		fmt.Println("insecure:", Congestioncontrol)
-		fmt.Println("uuid:", uuid)
 		fmt.Println("Udprelay_mode:", Udprelay_mode)
 		fmt.Println("alpn:", alpn)
 		fmt.Println("sni:", sni)

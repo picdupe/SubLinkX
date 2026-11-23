@@ -1,19 +1,25 @@
 package utils
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"errors"
+	"math/big"
 )
 
-// RandString 生成随机字符串
-func RandString(number int) string {
-	str := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
-	// 用 []byte 直接构造字符串
-	n := rand.Intn(number) + 1 // 防止生成空字符串，范围是1到31
-	randomString := make([]byte, n)
-	for i := 0; i < n; i++ {
-		randomIndex := rand.Intn(len(str))
-		randomString[i] = str[randomIndex]
+// Generate a fixed-length string using cryptographically secure randomness.
+func RandString(length int) (string, error) {
+	if length <= 0 {
+		return "", errors.New("random string length must be positive")
 	}
-	Secret := string(randomString)
-	return Secret
+	const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	limit := big.NewInt(int64(len(alphabet)))
+	result := make([]byte, length)
+	for i := range result {
+		index, err := rand.Int(rand.Reader, limit)
+		if err != nil {
+			return "", err
+		}
+		result[i] = alphabet[index.Int64()]
+	}
+	return string(result), nil
 }

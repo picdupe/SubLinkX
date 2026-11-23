@@ -73,10 +73,13 @@ func EncodeHY2URL(hy2 HY2) string {
 func DecodeHY2URL(s string) (HY2, error) {
 	u, err := url.Parse(s)
 	if err != nil {
-		return HY2{}, fmt.Errorf("解析失败的URL: %s,错误:%s", s, err)
+		return HY2{}, fmt.Errorf("invalid Hysteria 2 URL")
 	}
 	if u.Scheme != "hy2" && u.Scheme != "hysteria2" {
-		return HY2{}, fmt.Errorf("非hy2协议: %s", s)
+		return HY2{}, fmt.Errorf("unsupported Hysteria 2 URL scheme")
+	}
+	if u.User == nil {
+		return HY2{}, fmt.Errorf("Hysteria 2 URL has no password")
 	}
 	password := u.User.Username()
 	server := u.Hostname()
@@ -99,17 +102,14 @@ func DecodeHY2URL(s string) (HY2, error) {
 		name = server + ":" + u.Port()
 	}
 	if CheckEnvironment() {
-		fmt.Println("password:", password)
 		fmt.Println("server:", server)
 		fmt.Println("port:", port)
 		fmt.Println("insecure:", insecure)
-		fmt.Println("auth:", auth)
 		fmt.Println("upMbps:", upMbps)
 		fmt.Println("downMbps:", downMbps)
 		fmt.Println("alpn:", alpn)
 		fmt.Println("sni:", sni)
 		fmt.Println("obfs:", obfs)
-		fmt.Println("obfsPassword:", obfsPassword)
 		fmt.Println("name:", name)
 	}
 	return HY2{

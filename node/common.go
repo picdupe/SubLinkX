@@ -6,13 +6,23 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sublink/utils"
 )
 
 type SqlConfig struct {
-	Clash string `json:"clash"`
-	Surge string `json:"surge"`
-	Udp   bool   `json:"udp"`
-	Cert  bool   `json:"cert"`
+	Clash                 string `json:"clash"`
+	Surge                 string `json:"surge"`
+	Udp                   bool   `json:"udp"`
+	Cert                  bool   `json:"cert"`
+	SupportX25519MLKEM768 bool   `json:"support_x25519mlkem768"`
+}
+
+func readRemoteConfig(rawURL string) ([]byte, error) {
+	data, err := utils.FetchPublicHTTP(rawURL, 5<<20)
+	if err != nil {
+		return nil, fmt.Errorf("fetch remote template failed")
+	}
+	return data, nil
 }
 
 // ipv6地址匹配规则

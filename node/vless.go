@@ -100,14 +100,17 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 		base64(username@host:port?encryption=none&security=auto&type=tcp)
 	*/
 	// 解析base64然后重新url编码
-	if !strings.Contains(s, "vless://") {
-		return VLESS{}, fmt.Errorf("非vless协议: %s", s)
+	if !strings.HasPrefix(strings.ToLower(s), "vless://") {
+		return VLESS{}, fmt.Errorf("unsupported VLESS URL scheme")
 	}
 	s = "vless://" + Base64Decode(strings.Split(s, "://")[1])
 	// 解析url
 	u, err := url.Parse(s)
 	if err != nil {
-		return VLESS{}, fmt.Errorf("url parse error: %v", err)
+		return VLESS{}, fmt.Errorf("invalid VLESS URL")
+	}
+	if u.User == nil {
+		return VLESS{}, fmt.Errorf("VLESS URL has no UUID")
 	}
 	uuid := u.User.Username()
 	hostname := u.Hostname()
@@ -136,7 +139,6 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 		name = hostname + ":" + u.Port()
 	}
 	if CheckEnvironment() {
-		fmt.Println("uuid:", uuid)
 		fmt.Println("hostname:", hostname)
 		fmt.Println("port:", port)
 		fmt.Println("encryption:", encryption)
@@ -178,4 +180,3 @@ func DecodeVLESSURL(s string) (VLESS, error) {
 		},
 	}, nil
 }
-

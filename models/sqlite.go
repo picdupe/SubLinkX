@@ -1,8 +1,11 @@
 package models
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"os"
+	"sublink/utils"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -11,44 +14,44 @@ import (
 var DB *gorm.DB
 var isInitialized bool
 
-func InitSqlite() {
-	// 检查目录是否创建
-	_, err := os.Stat("./db")
-	if err != nil {
-		if os.IsNotExist(err) {
-			os.Mkdir("./db", os.ModePerm)
-		}
+func InitSqlite() error {
+	if isInitialized {
+		return nil
 	}
-	// 连接数据库
+	if err := os.MkdirAll("./db", 0755); err != nil {
+		return fmt.Errorf("create database directory: %w", err)
+	}
 	db, err := gorm.Open(sqlite.Open("./db/sublink.db"), &gorm.Config{})
 	if err != nil {
-		log.Println("连接数据库失败")
+		return fmt.Errorf("open sqlite database: %w", err)
 	}
 	DB = db
-	// 检查是否已经初始化
-	if isInitialized {
-		log.Println("数据库已经初始化，无需重复初始化")
-		return
+	if err := db.AutoMigrate(
+		&User{}, &SubLogs{}, &GroupNode{}, &Node{}, &RelayServer{}, &RelayRoute{},
+		&Subcription{}, &RelayConfigRevision{}, &RelayConfigTask{}, &RelayAgentEvent{},
+	); err != nil {
+		return fmt.Errorf("migrate sqlite database: %w", err)
 	}
-	err = db.AutoMigrate(&User{}, &Subcription{}, &SubLogs{}, &GroupNode{}, &Node{})
-	if err != nil {
-		log.Println("数据表迁移失败")
-	}
-	// 初始化用户数据
-	err = db.First(&User{}).Error
-	if err == gorm.ErrRecordNotFound {
+	var existingUser User
+	if err := db.First(&existingUser).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		initialPassword, err := utils.RandString(32)
+		if err != nil {
+			return fmt.Errorf("generate initial admin password: %w", err)
+		}
 		admin := &User{
 			Username: "admin",
-			Password: "123456",
+			Password: initialPassword,
 			Role:     "admin",
 			Nickname: "管理员",
 		}
-		err = admin.Create()
-		if err != nil {
-			log.Println("初始化添加用户数据失败")
+		if err := admin.Create(); err != nil {
+			return fmt.Errorf("create initial admin user: %w", err)
 		}
+		log.Printf("已创建初始管理员账号 admin，请立即修改初始化密码：%s", initialPassword)
+	} else if err != nil {
+		return fmt.Errorf("read initial admin user: %w", err)
 	}
-	// 设置初始化标志为 true
 	isInitialized = true
-	log.Println("数据库初始化成功") // 只有在没有任何错误时才会打印这个日志
+	log.Println("数据库初始化成功")
+	return nil
 }

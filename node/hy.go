@@ -67,10 +67,10 @@ func EncodeHYURL(hy HY) string {
 func DecodeHYURL(s string) (HY, error) {
 	u, err := url.Parse(s)
 	if err != nil {
-		return HY{}, fmt.Errorf("失败的URL: %s", s)
+		return HY{}, fmt.Errorf("invalid Hysteria URL")
 	}
 	if u.Scheme != "hy" && u.Scheme != "hysteria" {
-		return HY{}, fmt.Errorf("非hy协议: %s", s)
+		return HY{}, fmt.Errorf("unsupported Hysteria URL scheme")
 	}
 	server := u.Hostname()
 	port, _ := strconv.Atoi(u.Port())
@@ -92,7 +92,6 @@ func DecodeHYURL(s string) (HY, error) {
 		fmt.Println("server:", server)
 		fmt.Println("port:", port)
 		fmt.Println("insecure:", insecure)
-		fmt.Println("auth:", auth)
 		fmt.Println("upMbps:", upMbps)
 		fmt.Println("downMbps:", downMbps)
 		fmt.Println("alpn:", alpn)

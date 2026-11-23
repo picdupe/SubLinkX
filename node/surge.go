@@ -2,9 +2,7 @@ package node
 
 import (
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -139,15 +137,9 @@ func DecodeSurge(proxys, groups []string, file string) (string, error) {
 	var surge []byte
 	var err error
 	if strings.Contains(file, "://") {
-		resp, err := http.Get(file)
+		surge, err = readRemoteConfig(file)
 		if err != nil {
-			log.Println("http.Get error", err)
-			return "", err
-		}
-		defer resp.Body.Close()
-		surge, err = io.ReadAll(resp.Body)
-		if err != nil {
-			log.Printf("error: %v", err)
+			log.Printf("failed to read remote Surge template: %v", err)
 			return "", err
 		}
 	} else {

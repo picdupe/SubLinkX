@@ -2,9 +2,7 @@ package node
 
 import (
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -228,6 +226,9 @@ func EncodeClash(urls []string, sqlconfig SqlConfig) ([]byte, error) {
 				"public-key": vless.Query.Pbk,
 				"short-id":   vless.Query.Sid,
 			}
+			if sqlconfig.SupportX25519MLKEM768 && strings.EqualFold(vless.Query.Security, "reality") {
+				reality_opts["support-x25519mlkem768"] = true
+			}
 			grpc_opts := map[string]interface{}{
 				"grpc-mode":         "gun",
 				"grpc-service-name": vless.Query.ServiceName,
@@ -355,15 +356,9 @@ func DecodeClash(proxys []Proxy, yamlfile string) ([]byte, error) {
 	var data []byte
 	var err error
 	if strings.Contains(yamlfile, "://") {
-		resp, err := http.Get(yamlfile)
+		data, err = readRemoteConfig(yamlfile)
 		if err != nil {
-			log.Println("http.Get error", err)
-			return nil, err
-		}
-		defer resp.Body.Close()
-		data, err = io.ReadAll(resp.Body)
-		if err != nil {
-			log.Printf("error: %v", err)
+			log.Printf("failed to read remote Clash template: %v", err)
 			return nil, err
 		}
 	} else {
@@ -398,15 +393,20 @@ func DecodeClash(proxys []Proxy, yamlfile string) ([]byte, error) {
 	config["proxies"] = proxies
 	// 往ProxyGroup中插入代理列表
 	// ProxiesNameList := []string{"newProxy", "ceshi"}
-	proxyGroups := config["proxy-groups"].([]interface{})
+	proxyGroups, ok := config["proxy-groups"].([]interface{})
+	if !ok {
+		proxyGroups = []interface{}{}
+	}
 	for i, pg := range proxyGroups {
 		proxyGroup, ok := pg.(map[string]interface{})
 		if !ok {
 			continue
 		}
 		// 如果 proxyGroup["proxies"] 是 nil，初始化它为一个空的切片
-		if proxyGroup["proxies"] == nil {
+		groupProxies, ok := proxyGroup["proxies"].([]interface{})
+		if !ok {
 			proxyGroup["proxies"] = []interface{}{}
+			groupProxies = []interface{}{}
 		}
 		// 如果为链式代理的话则不插入返回
 		// log.Print("代理类型为:", proxyGroup["type"])
@@ -415,7 +415,7 @@ func DecodeClash(proxys []Proxy, yamlfile string) ([]byte, error) {
 		}
 		// 清除 nil 值
 		var validProxies []interface{}
-		for _, p := range proxyGroup["proxies"].([]interface{}) {
+		for _, p := range groupProxies {
 			if p != nil {
 				validProxies = append(validProxies, p)
 			}
@@ -433,7 +433,7 @@ func DecodeClash(proxys []Proxy, yamlfile string) ([]byte, error) {
 	// 将修改后的内容写回文件
 	newData, err := yaml.Marshal(config)
 	if err != nil {
-		log.Printf("error: %v", err)
+		return nil, err
 	}
 	return newData, nil
 }

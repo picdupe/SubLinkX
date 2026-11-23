@@ -2,7 +2,6 @@ package models
 
 import (
 	// 用于将配置解析为结构体
-	"log"
 	"strings" // 用于处理逗号分隔的字符串
 
 	"gorm.io/gorm"
@@ -11,12 +10,14 @@ import (
 // Subcription 结构体
 type Subcription struct {
 	gorm.Model
-	ID        int
-	Name      string
-	Config    string    `gorm:"type:text"` // Config 存储为 JSON 字符串
-	NodeOrder string    `gorm:"type:text"`
-	Nodes     []Node    `gorm:"many2many:subcription_nodes;"`
-	SubLogs   []SubLogs `gorm:"foreignKey:SubcriptionID;"`
+	ID              int
+	Name            string
+	AccessTokenHash string       `gorm:"size:64;not null;default:''" json:"-"`
+	Config          string       `gorm:"type:text"` // Config 存储为 JSON 字符串
+	NodeOrder       string       `gorm:"type:text"`
+	Nodes           []Node       `gorm:"many2many:subcription_nodes;"`
+	RelayRoutes     []RelayRoute `gorm:"many2many:subcription_relay_routes;" json:"RelayRoutes,omitempty"`
+	SubLogs         []SubLogs    `gorm:"foreignKey:SubcriptionID;"`
 }
 
 // Config 结构体，用于解析 Subcription.Config 字段的 JSON 内容
@@ -39,54 +40,52 @@ func (sub *Subcription) Add() error {
 		sub.NodeOrder = strings.Join(names, ",")
 	}
 
-	// 首先创建 Subcription 记录，不包括多对多关系
-	if err := DB.Create(sub).Error; err != nil {
-		return err
-	}
-	// 然后建立多对多关系
-
-	// log.Println("Adding subscription nodes:", sub.Nodes)
-	return DB.Model(sub).Association("Nodes").Append(sub.Nodes)
+	return DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(sub).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(sub).Association("Nodes").Append(sub.Nodes); err != nil {
+			return err
+		}
+		if len(sub.RelayRoutes) > 0 {
+			return tx.Model(sub).Association("RelayRoutes").Append(sub.RelayRoutes)
+		}
+		return nil
+	})
 }
 
 // Update 更新订阅
 func (sub *Subcription) Update(NewName *Subcription) error {
-	// 查找现有订阅
-	var existingSub Subcription
-	if err := DB.Where("id = ? or name = ?", sub.ID, sub.Name).First(&existingSub).Error; err != nil {
-		return err // 订阅不存在
-	}
-
-	// 更新非多对多字段，包括 NodeOrder
-	existingSub.Name = NewName.Name // 新名称
-	existingSub.Config = NewName.Config
-
-	// 更新 NodeOrder 字段
-	if len(NewName.Nodes) > 0 {
-		names := make([]string, len(NewName.Nodes))
-		for i, node := range NewName.Nodes {
-			names[i] = node.Name
+	return DB.Transaction(func(tx *gorm.DB) error {
+		var existingSub Subcription
+		if err := tx.Where("id = ? or name = ?", sub.ID, sub.Name).First(&existingSub).Error; err != nil {
+			return err
 		}
-		existingSub.NodeOrder = strings.Join(names, ",")
-	} else {
-		existingSub.NodeOrder = "" // 如果没有节点，清空
-	}
-
-	// 保存更新
-	if err := DB.Save(&existingSub).Error; err != nil {
-		return err
-	}
-
-	// 更新多对多关系: Replace 会清除旧关联并建立新关联
-	// 确保 sub.Nodes 包含了新的排序后的节点对象
-	log.Println("Updating subscription nodes:", NewName.SubLogs)
-	return DB.Model(&existingSub).Association("Nodes").Replace(NewName.Nodes)
+		existingSub.Name = NewName.Name
+		existingSub.Config = NewName.Config
+		if len(NewName.Nodes) > 0 {
+			names := make([]string, len(NewName.Nodes))
+			for i, node := range NewName.Nodes {
+				names[i] = node.Name
+			}
+			existingSub.NodeOrder = strings.Join(names, ",")
+		} else {
+			existingSub.NodeOrder = ""
+		}
+		if err := tx.Save(&existingSub).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&existingSub).Association("Nodes").Replace(NewName.Nodes); err != nil {
+			return err
+		}
+		return tx.Model(&existingSub).Association("RelayRoutes").Replace(NewName.RelayRoutes)
+	})
 }
 
 // Find 查找订阅 (通常用于获取单个订阅的详细信息，包括其关联节点和日志)
 func (sub *Subcription) Find() error {
 	// 使用 Preload 加载 Nodes 和 SubLogs 关联数据
-	if err := DB.Preload("Nodes").Preload("SubLogs").Where("id = ? or name = ?", sub.ID, sub.Name).First(sub).Error; err != nil {
+	if err := DB.Preload("Nodes").Preload("RelayRoutes").Preload("SubLogs").Where("id = ? or name = ?", sub.ID, sub.Name).First(sub).Error; err != nil {
 		return err
 	}
 	// 根据 NodeOrder 字段重新排序 Nodes
@@ -94,7 +93,6 @@ func (sub *Subcription) Find() error {
 		orderedNames := strings.Split(sub.NodeOrder, ",")
 		nodeMap := make(map[string]Node)
 		for _, node := range sub.Nodes {
-			log.Println("node:", node)
 			nodeMap[node.Name] = node
 		}
 
@@ -114,7 +112,7 @@ func (sub *Subcription) Find() error {
 // List 订阅列表 (返回所有订阅，并加载其关联节点和日志，按指定顺序)
 func (sub *Subcription) List() ([]Subcription, error) {
 	var subs []Subcription
-	err := DB.Preload("Nodes").Preload("SubLogs").Find(&subs).Error // 预加载所有关联
+	err := DB.Preload("Nodes").Preload("RelayRoutes").Preload("SubLogs").Find(&subs).Error // 预加载所有关联
 	if err != nil {
 		return nil, err
 	}
@@ -151,6 +149,9 @@ func (sub *Subcription) Del() error {
 	// 清除多对多关系
 	err := DB.Model(sub).Association("Nodes").Clear()
 	if err != nil {
+		return err
+	}
+	if err := DB.Model(sub).Association("RelayRoutes").Clear(); err != nil {
 		return err
 	}
 	// 删除主记录，由于 SubLogs 使用 foreignKey，理论上 GORM 应该能级联删除子记录。

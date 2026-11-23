@@ -94,10 +94,13 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 	*/
 	u, err := url.Parse(s)
 	if err != nil {
-		return Trojan{}, fmt.Errorf("url格式化失败:%s", s)
+		return Trojan{}, fmt.Errorf("invalid Trojan URL")
 	}
 	if u.Scheme != "trojan" {
-		return Trojan{}, fmt.Errorf("非trojan协议: %s", s)
+		return Trojan{}, fmt.Errorf("unsupported Trojan URL scheme")
+	}
+	if u.User == nil {
+		return Trojan{}, fmt.Errorf("Trojan URL has no password")
 	}
 	password := u.User.Username()
 	hostname := u.Hostname()
@@ -122,8 +125,6 @@ func DecodeTrojanURL(s string) (Trojan, error) {
 		name = hostname + ":" + u.Port()
 	}
 	if CheckEnvironment() {
-		fmt.Println("password:", password)
-		fmt.Println("password:", u.User.Username())
 		fmt.Println("hostname:", hostname)
 		fmt.Println("port:", port)
 		fmt.Println("peer:", peer)

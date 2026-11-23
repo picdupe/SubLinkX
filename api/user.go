@@ -98,7 +98,6 @@ func UserPages(c *gin.Context) {
 func UserSet(c *gin.Context) {
 	NewUsername := c.PostForm("username")
 	NewPassword := c.PostForm("password")
-	log.Println(NewUsername, NewPassword)
 	if NewUsername == "" || NewPassword == "" {
 		c.JSON(400, gin.H{
 			"code": "00001",
@@ -106,8 +105,19 @@ func UserSet(c *gin.Context) {
 		})
 		return
 	}
+	if len(NewPassword) < 8 || len(NewPassword) > 72 {
+		c.JSON(400, gin.H{"code": "00001", "msg": "密码长度须为 8 到 72 字节"})
+		return
+	}
 	username, _ := c.Get("username")
 	user := &models.User{Username: username.(string)}
+	if NewUsername != username.(string) {
+		other := &models.User{Username: NewUsername}
+		if err := other.Find(); err == nil {
+			c.JSON(409, gin.H{"code": "00001", "msg": "用户名已存在"})
+			return
+		}
+	}
 	err := user.Set(&models.User{
 		Username: NewUsername,
 		Password: NewPassword,

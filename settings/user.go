@@ -1,35 +1,38 @@
 package settings
 
 import (
-	"log"
+	"fmt"
 	"sublink/models"
+
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // 重置默认用户
-func ResetUser(username string, password string) {
-	// 如果账号或者密码为空
+func ResetUser(username string, password string) error {
 	if username == "" || password == "" {
-		log.Println("账号或者密码不能为空")
-		return
+		return fmt.Errorf("username and password are required")
 	}
-	if len(password) < 6 {
-		log.Println("密码不能小于6位数")
-		return
+	if len(password) < 8 || len(password) > 72 {
+		return fmt.Errorf("password must be between 8 and 72 bytes")
 	}
-	User := &models.User{}
-	// 获取所有用户
-	users, err := User.All()
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("用户存在")
+		return err
 	}
-	// 遍历所有用户
-	for _, user := range users {
-		// 删除所有用户
-		user.Del()
+	user := &models.User{Username: username, Password: string(hash), Role: "admin", Nickname: "管理员"}
+	if err := models.DB.Transaction(func(tx *gorm.DB) error {
+		var maxTokenVersion int64
+		if err := tx.Model(&models.User{}).Select("COALESCE(MAX(token_version), 0)").Scan(&maxTokenVersion).Error; err != nil {
+			return err
+		}
+		user.TokenVersion = maxTokenVersion + 1
+		if err := tx.Where("1 = 1").Delete(&models.User{}).Error; err != nil {
+			return err
+		}
+		return tx.Create(user).Error
+	}); err != nil {
+		return err
 	}
-
-	//打印输出
-	log.Printf("账号%s,密码%s", username, password)
-	User = &models.User{Username: username, Password: password, Role: "admin", Nickname: "管理员"}
-	User.Create()
+	return nil
 }

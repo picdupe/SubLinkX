@@ -252,9 +252,17 @@ func NodeAdd(c *gin.Context) {
 		Name: name,
 		Link: link,
 	}
-	if link == "" && !strings.Contains(link, "://") {
+	parsedLink, parseErr := url.ParseRequestURI(link)
+	validScheme := false
+	if parsedLink != nil {
+		switch strings.ToLower(parsedLink.Scheme) {
+		case "ss", "ssr", "trojan", "vmess", "vless", "hy", "hysteria", "hy2", "hysteria2", "tuic", "http", "https":
+			validScheme = true
+		}
+	}
+	if parseErr != nil || parsedLink == nil || !validScheme {
 		c.JSON(400, gin.H{
-			"msg": "link不能为空或者格式不正确,请检查链接是否包含协议头,例如 http:// 或 https://",
+			"msg": "link格式不正确或协议不受支持",
 		})
 		return
 	}
@@ -325,6 +333,15 @@ func NodeDel(c *gin.Context) {
 	}
 	x, _ := strconv.Atoi(id)
 	n.ID = x
+	var relayReferences int64
+	if err := models.DB.Model(&models.RelayRoute{}).Where("landing_node_id = ?", n.ID).Count(&relayReferences).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "检查中转线路引用失败"})
+		return
+	}
+	if relayReferences > 0 {
+		c.JSON(409, gin.H{"msg": "节点仍被中转线路引用，请先删除或更换线路目标"})
+		return
+	}
 	err := n.Del()
 	if err != nil {
 		c.JSON(400, gin.H{

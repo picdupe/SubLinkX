@@ -90,7 +90,6 @@ func (gn *GroupNode) Del() error {
 		log.Println(result.Error)
 		return result.Error
 	}
-	log.Println(gn.Nodes)
 	err := DB.Model(gn).Association("Nodes").Delete(gn.Nodes)
 	if err != nil {
 		log.Println("解除关联失败", err)
@@ -221,8 +220,6 @@ func (n *Node) UpdateGroup(gns []GroupNode) error {
 				return result.Error // 如果查询出错，返回错误
 			}
 			IsGroupNot := n.GroupNodes // 临时分组节点切片
-			log.Println("NewGroupDatas", IsGroupNot)
-
 			// 解除关联
 			// log.Println("分组名称为空,解除关联", NewGroup)
 			err := DB.Model(n).Association("GroupNodes").Clear()
