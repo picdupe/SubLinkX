@@ -25,23 +25,26 @@ const cachedViews = computed(() => useTagsViewStore().cachedViews); // 缓存页
 .app-main {
   position: relative;
   width: 100%;
-  min-height: calc(100vh - $navbar-height);
-  overflow: hidden;
-  background-color: var(--el-bg-color-page);
+  box-sizing: border-box;
+  min-height: calc(100vh - 28px);
+  overflow: visible;
+  border-radius: 22px;
+  background: transparent;
+  box-shadow: none;
 }
 
 .hasTagsView .app-main {
-  min-height: calc(100vh - $navbar-height - $tags-view-height);
+  min-height: calc(100vh - 28px);
 }
 
 .fixed-header + .app-main {
-  min-height: 100vh;
-  padding-top: $navbar-height;
+  min-height: calc(100vh - 28px);
+  padding-top: 0;
 }
 
 .hasTagsView .fixed-header + .app-main {
-  min-height: 100vh;
-  padding-top: $navbar-height + $tags-view-height;
+  min-height: calc(100vh - 28px);
+  padding-top: 0;
 }
 
 .layout-mix,
@@ -53,24 +56,25 @@ const cachedViews = computed(() => useTagsViewStore().cachedViews); // 缓存页
 
 .layout-mix {
   .app-main {
-    height: calc(100vh - $navbar-height);
+    height: calc(100vh - 28px);
+    min-height: calc(100vh - 28px);
     padding-top: 0;
     overflow-y: auto;
   }
 
   .hasTagsView .app-main {
-    height: calc(100vh - $navbar-height - $tags-view-height);
-    min-height: calc(100vh - $navbar-height - $tags-view-height);
+    height: calc(100vh - 28px);
+    min-height: calc(100vh - 28px);
   }
 
   .fixed-header + .app-main {
-    min-height: calc(100vh - $navbar-height);
+    min-height: calc(100vh - 28px);
   }
 
   .hasTagsView .fixed-header + .app-main {
-    height: calc(100vh - $navbar-height);
-    min-height: calc(100vh - $navbar-height);
-    padding-top: $tags-view-height;
+    height: calc(100vh - 28px);
+    min-height: calc(100vh - 28px);
+    padding-top: 0;
   }
 }
 

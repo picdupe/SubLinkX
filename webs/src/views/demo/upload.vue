@@ -22,14 +22,14 @@ const multiPicUrls = ref([
       type="primary"
       target="_blank"
       class="mb-10"
-      >示例源码 请点击>>>></el-link
+      >{{ $t('demo.sourceLink') }}</el-link
     >
 
     <el-form>
-      <el-form-item label="单图上传">
+      <el-form-item :label="$t('demo.singleUpload')">
         <single-upload v-model="singlePicUrl" />
       </el-form-item>
-      <el-form-item label="多图上传">
+      <el-form-item :label="$t('demo.multiUpload')">
         <multi-upload v-model="multiPicUrls" />
       </el-form-item>
     </el-form>

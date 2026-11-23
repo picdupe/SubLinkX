@@ -1,13 +1,15 @@
 <!-- 雷达图 -->
 <template>
   <el-card>
-    <template #header> 订单状态雷达图 </template>
+    <template #header>{{ $t('charts.orderStatusRadar') }}</template>
     <div :id="id" :class="className" :style="{ height, width }"></div>
   </el-card>
 </template>
 
 <script setup lang="ts">
 import * as echarts from "echarts";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 
 const props = defineProps({
   id: {
@@ -40,7 +42,7 @@ const options = {
   legend: {
     x: "center",
     y: "bottom",
-    data: ["预定数量", "下单数量", "发货数量"],
+    data: [t('charts.reserved'), t('charts.ordered'), t('charts.shipped')],
     textStyle: {
       color: "#999",
     },
@@ -49,12 +51,12 @@ const options = {
     // shape: 'circle',
     radius: "60%",
     indicator: [
-      { name: "家用电器" },
-      { name: "服装箱包" },
-      { name: "运动户外" },
-      { name: "手机数码" },
-      { name: "汽车用品" },
-      { name: "家具厨具" },
+      { name: t('charts.homeAppliances') },
+      { name: t('charts.clothing') },
+      { name: t('charts.outdoorSports') },
+      { name: t('charts.digitalProducts') },
+      { name: t('charts.autoSupplies') },
+      { name: t('charts.furniture') },
     ],
   },
   series: [
@@ -72,15 +74,15 @@ const options = {
       data: [
         {
           value: [400, 400, 400, 400, 400, 400],
-          name: "预定数量",
+          name: t('charts.reserved'),
         },
         {
           value: [300, 300, 300, 300, 300, 300],
-          name: "下单数量",
+          name: t('charts.ordered'),
         },
         {
           value: [200, 200, 200, 200, 200, 200],
-          name: "发货数量",
+          name: t('charts.shipped'),
         },
       ],
     },

@@ -2,12 +2,11 @@ import defaultSettings from "@/settings";
 import { genMixColor } from "@/utils/color";
 import { setStyleProperty } from "@/utils";
 import { ThemeEnum } from "@/enums/ThemeEnum";
+import { LayoutEnum } from "@/enums/LayoutEnum";
 
 type SettingsValue = boolean | string;
 
 export const useSettingsStore = defineStore("setting", () => {
-  // 是否显示设置
-  const settingsVisible = ref(false);
   // 是否显示标签视图
   const tagsView = useStorage<boolean>("tagsView", defaultSettings.tagsView);
   // 是否显示侧边栏logo
@@ -21,7 +20,8 @@ export const useSettingsStore = defineStore("setting", () => {
     defaultSettings.fixedHeader
   );
   // 布局模式：left-左侧模式(默认) top-顶部模式 mix-混合模式
-  const layout = useStorage<string>("layout", defaultSettings.layout);
+  // The application now uses a single fixed left sidebar layout.
+  const layout = ref<string>(LayoutEnum.LEFT);
   // 主题颜色
   const themeColor = useStorage<string>(
     "themeColor",
@@ -66,7 +66,6 @@ export const useSettingsStore = defineStore("setting", () => {
     fixedHeader,
     tagsView,
     sidebarLogo,
-    layout,
     watermarkEnabled,
   };
 
@@ -100,15 +99,7 @@ export const useSettingsStore = defineStore("setting", () => {
     themeColor.value = color;
   }
 
-  /**
-   * 切换布局
-   */
-  function changeLayout(val: string) {
-    layout.value = val;
-  }
-
   return {
-    settingsVisible,
     tagsView,
     fixedHeader,
     sidebarLogo,
@@ -119,6 +110,5 @@ export const useSettingsStore = defineStore("setting", () => {
     changeSetting,
     changeTheme,
     changeThemeColor,
-    changeLayout,
   };
 });

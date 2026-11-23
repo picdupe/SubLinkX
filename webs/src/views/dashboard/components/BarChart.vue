@@ -3,8 +3,8 @@
   <el-card>
     <template #header>
       <div class="title">
-        业绩柱状图
-        <el-tooltip effect="dark" content="点击试试下载" placement="bottom">
+        {{ $t('charts.revenue') }}
+        <el-tooltip effect="dark" :content="$t('charts.download')" placement="bottom">
           <i-ep-download class="download" @click="downloadEchart" />
         </el-tooltip>
       </div>
@@ -16,6 +16,8 @@
 
 <script setup lang="ts">
 import * as echarts from "echarts";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 
 const props = defineProps({
   id: {
@@ -57,7 +59,7 @@ const options = {
   legend: {
     x: "center",
     y: "bottom",
-    data: ["收入", "毛利润", "收入增长率", "利润增长率"],
+    data: [t('charts.revenue'), t('charts.grossProfit'), t('charts.revenueGrowth'), t('charts.profitGrowth')],
     textStyle: {
       color: "#999",
     },
@@ -65,7 +67,7 @@ const options = {
   xAxis: [
     {
       type: "category",
-      data: ["浙江", "北京", "上海", "广东", "深圳"],
+      data: [t('charts.zhejiang'), t('charts.beijing'), t('charts.shanghai'), t('charts.guangdong'), t('charts.shenzhen')],
       axisPointer: {
         type: "shadow",
       },
@@ -93,7 +95,7 @@ const options = {
   ],
   series: [
     {
-      name: "收入",
+      name: t('charts.revenue'),
       type: "bar",
       data: [7000, 7100, 7200, 7300, 7400],
       barWidth: 20,
@@ -106,7 +108,7 @@ const options = {
       },
     },
     {
-      name: "毛利润",
+      name: t('charts.grossProfit'),
       type: "bar",
       data: [8000, 8200, 8400, 8600, 8800],
       barWidth: 20,
@@ -119,7 +121,7 @@ const options = {
       },
     },
     {
-      name: "收入增长率",
+      name: t('charts.revenueGrowth'),
       type: "line",
       yAxisIndex: 1,
       data: [60, 65, 70, 75, 80],
@@ -128,7 +130,7 @@ const options = {
       },
     },
     {
-      name: "利润增长率",
+      name: t('charts.profitGrowth'),
       type: "line",
       yAxisIndex: 1,
       data: [70, 75, 80, 85, 90],
@@ -156,7 +158,7 @@ const downloadEchart = () => {
     if (ctx) {
       ctx.drawImage(img, 0, 0, img.width, img.height);
       const link = document.createElement("a");
-      link.download = `业绩柱状图.png`;
+      link.download = `${t('charts.revenue')}.png`;
       link.href = canvas.toDataURL("image/png", 0.9);
       document.body.appendChild(link);
       link.click();

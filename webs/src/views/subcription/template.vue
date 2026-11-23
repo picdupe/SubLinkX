@@ -1,6 +1,8 @@
 <script setup lang='ts'>
-import { ref,onMounted,nextTick  } from 'vue'
+import { computed, ref,onMounted,nextTick  } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {getTemp,AddTemp,UpdateTemp,DelTemp} from "@/api/subcription/temp"
+const { t } = useI18n()
 interface Temp {
   file: string;
   text: string;
@@ -12,7 +14,8 @@ const Tempname = ref('')
 const TempText = ref('')
 const dialogVisible = ref(false)
 const table = ref()
-const TempTitle = ref('')
+const tempMode = ref<'add' | 'edit'>('add')
+const tempTitle = computed(() => t(tempMode.value === 'add' ? 'templates.addTitle' : 'templates.editTitle'))
 const radio1 = ref('1')
 
 async function gettemps() {
@@ -23,26 +26,26 @@ onMounted(async() => {
   gettemps()
 })
 const handleAddTemp = ()=>{
-  TempTitle.value= '添加模版'
+  tempMode.value = 'add'
   Tempname.value = ''
   TempText.value = ''
   radio1.value = '1'
   dialogVisible.value = true
 }
 const addtemp = async ()=>{
-   if (TempTitle.value== '添加模版'){
+   if (tempMode.value === 'add'){
         await AddTemp({
         filename: Tempname.value.trim(),
         text: TempText.value.trim(),
       })
-      ElMessage.success("添加成功");
+      ElMessage.success(t('templates.addSuccess'));
    }else{
     await UpdateTemp({
         filename: Tempname.value.trim(),
         oldname: Tempoldname.value.trim(),
         text: TempText.value.trim(),
       })
-    ElMessage.success("更新成功");
+    ElMessage.success(t('templates.updateSuccess'));
    }
     gettemps()
     Tempname.value = ''
@@ -65,7 +68,7 @@ const selectAll = () => {
 const handleEdit = (row:any) => {
   for (let i = 0; i < tableData.value.length; i++) {
     if (tableData.value[i].file === row.file) {
-      TempTitle.value= '编辑模版'
+      tempMode.value = 'edit'
       Tempname.value = tableData.value[i].file
       Tempoldname.value = Tempname.value
       TempText.value = tableData.value[i].text
@@ -80,11 +83,11 @@ const toggleSelection = () => {
 
 const handleDel = (row:any) => {
   ElMessageBox.confirm(
-    `你是否要删除 ${row.file} ?`,
-    '提示',
+    t('templates.deletePrompt', { name: row.file }),
+    t('common.deletePrompt'),
     {
-      confirmButtonText: 'OK',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning',
     }
   ).then(async () => {
@@ -94,7 +97,7 @@ const handleDel = (row:any) => {
       })
       ElMessage({
         type: 'success',
-        message: '删除成功',
+        message: t('templates.deleteSuccess'),
       })
       gettemps()      
     })
@@ -105,11 +108,11 @@ const selectDel = () => {
       return
   }
   ElMessageBox.confirm(
-    `你是否要删除选中这些 ?`,
-    '提示',
+    t('templates.deleteSelectedPrompt'),
+    t('common.deletePrompt'),
     {
-      confirmButtonText: 'OK',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning',
     }
   ).then( () => {
@@ -121,7 +124,7 @@ const selectDel = () => {
       }
       ElMessage({
         type: 'success',
-        message: '删除成功',
+        message: t('templates.deleteSuccess'),
       })
     })
 
@@ -148,52 +151,54 @@ const currentTableData = computed(() => {
 </script>
 
 <template>
-  <div>
+  <div class="management-page">
     <el-dialog
     v-model="dialogVisible"
-    :title="TempTitle"
-    width="80%"
+    :title="tempTitle"
+    width="min(820px, 94vw)"
   >
   <el-input 
   v-model="TempText" 
-  placeholder="模版内容" 
+  :placeholder="$t('templates.content')"
   :rows="10" 
   type="textarea" 
   style="margin-bottom: 10px"
   />
-  <el-input v-model="Tempname" placeholder="模版文件名"/>
+  <el-input v-model="Tempname" :placeholder="$t('templates.filename')"/>
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="dialogVisible = false">关闭</el-button>
-        <el-button type="primary" @click="addtemp">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ $t('common.close') }}</el-button>
+        <el-button type="primary" @click="addtemp">{{ $t('common.confirm') }}</el-button>
       </div>
     </template>
   </el-dialog>
-    <el-card>
-    <el-button type="primary" @click="handleAddTemp">添加模版</el-button>
-    <div style="margin-bottom: 10px"></div>
+    <el-card class="management-card" shadow="never">
+    <div class="management-toolbar">
+      <el-button type="primary" @click="handleAddTemp">{{ $t('templates.add') }}</el-button>
+    </div>
       <el-table ref="table" :data="currentTableData" style="width: 100%" @selection-change="handleSelectionChange">
     <el-table-column type="selection" fixed prop="ID" label="id"  />
-    <el-table-column prop="file" label="模版文件名"  >
+    <el-table-column prop="file" :label="$t('templates.filename')">
       <template #default="scope">
         <el-tag type="success">{{scope.row.file}}</el-tag>
       </template>
     </el-table-column>
-    <el-table-column prop="create_date" label="创建时间" sortable  />
-    <el-table-column fixed="right" label="操作" width="120">
+    <el-table-column prop="create_date" :label="$t('templates.createdAt')" sortable />
+    <el-table-column fixed="right" :label="$t('templates.actions')" width="120">
       <template #default="scope">
-        <el-button link type="primary" size="small" @click="handleEdit(scope.row)">编辑</el-button>
-  <el-button link type="primary" size="small" @click="handleDel(scope.row)">删除</el-button>
+        <el-button link type="primary" size="small" @click="handleEdit(scope.row)">{{ $t('common.edit') }}</el-button>
+  <el-button link type="primary" size="small" @click="handleDel(scope.row)">{{ $t('common.delete') }}</el-button>
 
       </template>
     </el-table-column>
   </el-table>
-  <div style="margin-top: 20px" />
-    <el-button type="info" @click="selectAll()">全选</el-button>
-    <el-button type="warning" @click="toggleSelection()">取消选择</el-button>
-    <el-button type="danger" @click="selectDel">批量删除</el-button>
-  <div style="margin-top: 20px"/>
+  <div class="management-actions">
+    <el-button type="info" @click="selectAll()">{{ $t('common.selectAll') }}</el-button>
+    <el-button type="warning" @click="toggleSelection()">{{ $t('common.clearSelection') }}</el-button>
+    <el-button type="danger" @click="selectDel">{{ $t('common.deleteSelected') }}</el-button>
+  </div>
+  <div class="management-footer">
   <el-pagination
   @size-change="handleSizeChange"
   @current-change="handleCurrentChange"
@@ -203,15 +208,13 @@ const currentTableData = computed(() => {
   :page-sizes="[10, 20, 30, 40]"
   :total="tableData.length">
 </el-pagination>
+  </div>
 
     </el-card>
   </div>
 </template>
 
 <style scoped>
-.el-card{
-  margin: 10px;
-}
 .el-input{
   margin-bottom: 10px;
 }

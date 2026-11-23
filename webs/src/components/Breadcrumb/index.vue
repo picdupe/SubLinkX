@@ -1,5 +1,5 @@
 <template>
-  <el-breadcrumb class="flex-y-center">
+  <el-breadcrumb class="app-breadcrumb flex-y-center">
     <transition-group
       enter-active-class="animate__animated animate__fadeInRight"
     >
@@ -90,8 +90,35 @@ onBeforeMount(() => {
 
 <style lang="scss" scoped>
 // 覆盖 element-plus 的样式
-.el-breadcrumb__inner,
-.el-breadcrumb__inner a {
-  font-weight: 400 !important;
+
+:deep(.el-breadcrumb__inner),
+:deep(.el-breadcrumb__inner a) {
+	font-size: 13px;
+	font-weight: 500 !important;
+		color: #64748b;
+	transition: color 160ms ease;
+
+	&:hover {
+		color: #2488ee;
+	}
+}
+
+:deep(.el-breadcrumb__separator) {
+	margin: 0 10px;
+	color: #cbd5e1;
+}
+
+:deep(.el-breadcrumb__item:last-child .el-breadcrumb__inner) {
+	color: #263445;
+	font-weight: 650 !important;
+}
+
+html.dark :deep(.el-breadcrumb__inner),
+html.dark :deep(.el-breadcrumb__inner a) {
+	color: #a8b3c5;
+}
+
+html.dark :deep(.el-breadcrumb__item:last-child .el-breadcrumb__inner) {
+	color: #e2e8f0;
 }
 </style>

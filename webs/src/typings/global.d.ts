@@ -48,7 +48,6 @@ declare global {
     /** 系统版本 */
     version: string;
     /** 是否显示设置 */
-    showSettings: boolean;
     /** 是否固定头部 */
     fixedHeader: boolean;
     /** 是否显示多标签导航 */

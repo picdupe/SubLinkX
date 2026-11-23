@@ -1,5 +1,9 @@
 <template>
-  <el-dropdown trigger="click" @command="handleSizeChange">
+  <el-dropdown
+    trigger="click"
+    popper-class="size-dropdown-popper"
+    @command="handleSizeChange"
+  >
     <div>
       <svg-icon icon-class="size" />
     </div>
@@ -37,3 +41,18 @@ function handleSizeChange(size: string) {
   ElMessage.success(t("sizeSelect.message.success"));
 }
 </script>
+
+<style lang="scss" scoped>
+:global(.size-dropdown-popper) {
+  border-radius: 14px !important;
+}
+
+:global(.size-dropdown-popper .el-dropdown-menu) {
+  padding: 5px;
+}
+
+:global(.size-dropdown-popper .el-dropdown-menu__item) {
+	 margin: 2px 4px;
+  border-radius: 9px;
+}
+</style>

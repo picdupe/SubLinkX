@@ -16,6 +16,8 @@
 <script setup lang="ts">
 import { UploadRawFile, UploadRequestOptions } from "element-plus";
 import { uploadFileApi } from "@/api/file";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 
 const props = defineProps({
   modelValue: {
@@ -42,7 +44,7 @@ async function uploadFile(options: UploadRequestOptions): Promise<any> {
  */
 function handleBeforeUpload(file: UploadRawFile) {
   if (file.size > 2 * 1048 * 1048) {
-    ElMessage.warning("上传图片不能大于2M");
+    ElMessage.warning(t("upload.maxImageSize"));
     return false;
   }
   return true;

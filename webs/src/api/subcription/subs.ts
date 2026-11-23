@@ -34,3 +34,10 @@ export function UpdateSub(data: any){
     },
   });
 }
+
+export function rotateSubToken(id: number) {
+  return request({
+    url: `/api/v1/subcription/${id}/token`,
+    method: "post",
+  });
+}

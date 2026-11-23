@@ -1,13 +1,15 @@
 <!-- 饼图 -->
 <template>
   <el-card>
-    <template #header> 产品分类饼图 </template>
+    <template #header>{{ $t('charts.productCategories') }}</template>
     <div :id="id" :class="className" :style="{ height, width }"></div>
   </el-card>
 </template>
 
 <script setup lang="ts">
 import * as echarts from "echarts";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 
 const props = defineProps({
   id: {
@@ -58,10 +60,10 @@ const options = {
         },
       },
       data: [
-        { value: 26, name: "家用电器" },
-        { value: 27, name: "户外运动" },
-        { value: 24, name: "汽车用品" },
-        { value: 23, name: "手机数码" },
+        { value: 26, name: t('charts.homeAppliances') },
+        { value: 27, name: t('charts.outdoorSports') },
+        { value: 24, name: t('charts.autoSupplies') },
+        { value: 23, name: t('charts.digitalProducts') },
       ],
     },
   ],

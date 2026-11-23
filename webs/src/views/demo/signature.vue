@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { uploadFileApi } from "@/api/file";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 
 const imgUrl = ref("");
 const canvas = ref();
@@ -61,11 +63,11 @@ const handleToFile = async () => {
   if (isCanvasBlank(canvas.value)) {
     ElMessage({
       type: "warning",
-      message: "当前签名文件为空",
+      message: t('demo.signatureEmpty'),
     });
     return;
   }
-  const file = dataURLtoFile(canvas.value.toDataURL(), "签名.png");
+  const file = dataURLtoFile(canvas.value.toDataURL(), t('demo.signatureFilename'));
 
   if (!file) return;
   const { data } = await uploadFileApi(file);
@@ -87,14 +89,14 @@ const handleSaveImg = () => {
   if (isCanvasBlank(canvas.value)) {
     ElMessage({
       type: "warning",
-      message: "当前签名文件为空",
+      message: t('demo.signatureEmpty'),
     });
     return;
   }
   const el = document.createElement("a");
   // 设置 href 为图片经过 base64 编码后的字符串，默认为 png 格式
   el.href = canvas.value.toDataURL();
-  el.download = "签名";
+  el.download = t('demo.signatureName');
   // 创建一个点击事件并对 a 标签进行触发
   const event = new MouseEvent("click");
   el.dispatchEvent(event);
@@ -135,11 +137,11 @@ function paint(
 </script>
 <template>
   <div class="canvas-dom">
-    <h3>基于canvas实现的签名组件</h3>
+    <h3>{{ $t('demo.signatureTitle') }}</h3>
     <header>
-      <el-button type="primary" @click="handleSaveImg">保存为图片</el-button>
-      <el-button @click="handleToFile"> 保存到后端 </el-button>
-      <el-button @click="handleClearSign"> 清空签名 </el-button>
+      <el-button type="primary" @click="handleSaveImg">{{ $t('demo.saveImage') }}</el-button>
+      <el-button @click="handleToFile">{{ $t('demo.saveToServer') }}</el-button>
+      <el-button @click="handleClearSign">{{ $t('demo.clearSignature') }}</el-button>
     </header>
     <canvas
       ref="canvas"
@@ -153,7 +155,7 @@ function paint(
       @touchend="onEventEnd"
     >
     </canvas>
-    <img v-if="imgUrl" :src="imgUrl" alt="签名" />
+    <img v-if="imgUrl" :src="imgUrl" :alt="$t('demo.signatureName')" />
   </div>
 </template>
 <style scoped lang="scss">

@@ -81,7 +81,6 @@ declare module "vue" {
     IEpTop: (typeof import("~icons/ep/top"))["default"];
     IEpUploadFilled: (typeof import("~icons/ep/upload-filled"))["default"];
     LangSelect: (typeof import("./../components/LangSelect/index.vue"))["default"];
-    LayoutSelect: (typeof import("./../layout/components/Settings/components/LayoutSelect.vue"))["default"];
     MultiUpload: (typeof import("./../components/Upload/MultiUpload.vue"))["default"];
     NavBar: (typeof import("./../layout/components/NavBar/index.vue"))["default"];
     NavbarLeft: (typeof import("./../layout/components/NavBar/components/NavbarLeft.vue"))["default"];
@@ -92,7 +91,6 @@ declare module "vue" {
     RightPanel: (typeof import("./../components/RightPanel/index.vue"))["default"];
     RouterLink: (typeof import("vue-router"))["RouterLink"];
     RouterView: (typeof import("vue-router"))["RouterView"];
-    Settings: (typeof import("./../layout/components/Settings/index.vue"))["default"];
     Sidebar: (typeof import("./../layout/components/Sidebar/index.vue"))["default"];
     SidebarLogo: (typeof import("./../layout/components/Sidebar/components/SidebarLogo.vue"))["default"];
     SidebarMenu: (typeof import("./../layout/components/Sidebar/components/SidebarMenu.vue"))["default"];

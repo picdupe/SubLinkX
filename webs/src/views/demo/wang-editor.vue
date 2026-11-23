@@ -1,8 +1,10 @@
 <!-- wangEditor富文本编辑器示例 -->
 <script setup lang="ts">
 import Editor from "@/components/WangEditor/index.vue";
+import { useI18n } from "vue-i18n";
 
-const value = ref("初始内容");
+const { t } = useI18n();
+const value = ref(t('demo.editorInitial'));
 </script>
 
 <template>
@@ -12,7 +14,7 @@ const value = ref("初始内容");
       type="primary"
       target="_blank"
       class="mb-[20px]"
-      >示例源码 请点击>>>></el-link
+      >{{ $t('demo.sourceLink') }}</el-link
     >
     <editor v-model="value" style="height: calc(100vh - 180px)" />
   </div>

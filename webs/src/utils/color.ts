@@ -161,7 +161,7 @@ function hexToRGB(hex: string): RGB {
   hex = hex.toUpperCase();
   const hexRegExp = /^#([0-9A-F]{6})$/;
   if (!hexRegExp.test(hex)) {
-    throw new Error("请传入合法的16进制颜色值，eg: #FF0000");
+  throw new Error("Invalid hexadecimal color value. Expected format: #FF0000");
   }
 
   const hexValArr = (hexRegExp.exec(hex)?.[1] || "000000").split(

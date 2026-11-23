@@ -5,10 +5,10 @@
       type="primary"
       target="_blank"
       class="mb-10"
-      >示例源码 请点击>>>></el-link
+      >{{ $t('demo.sourceLink') }}</el-link
     >
 
-    <el-alert :closable="false" title="菜单一级">
+    <el-alert :closable="false" :title="$t('route.level1')">
       <router-view />
     </el-alert>
   </div>

@@ -1,5 +1,9 @@
 <template>
-  <el-dropdown trigger="click" @command="handleLanguageChange">
+  <el-dropdown
+    trigger="click"
+    popper-class="language-dropdown-popper"
+    @command="handleLanguageChange"
+  >
     <div>
       <svg-icon icon-class="language" :size="size" />
     </div>
@@ -30,13 +34,12 @@ defineProps({
   },
 });
 
-const langOptions = [
-  { label: "中文", value: LanguageEnum.ZH_CN },
-  { label: "English", value: LanguageEnum.EN },
-];
-
 const appStore = useAppStore();
 const { locale, t } = useI18n();
+const langOptions = computed(() => [
+  { label: t("langSelect.zhCn"), value: LanguageEnum.ZH_CN },
+  { label: t("langSelect.en"), value: LanguageEnum.EN },
+]);
 
 function handleLanguageChange(lang: string) {
   locale.value = lang;
@@ -45,3 +48,18 @@ function handleLanguageChange(lang: string) {
   ElMessage.success(t("langSelect.message.success"));
 }
 </script>
+
+<style lang="scss" scoped>
+:global(.language-dropdown-popper) {
+  border-radius: 14px !important;
+}
+
+:global(.language-dropdown-popper .el-dropdown-menu) {
+  padding: 5px;
+}
+
+:global(.language-dropdown-popper .el-dropdown-menu__item) {
+	 margin: 2px 4px;
+  border-radius: 9px;
+}
+</style>

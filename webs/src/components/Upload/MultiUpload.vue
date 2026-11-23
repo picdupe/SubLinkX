@@ -31,6 +31,8 @@ import {
   UploadProps,
 } from "element-plus";
 import { uploadFileApi, deleteFileApi } from "@/api/file";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 
 const emit = defineEmits(["update:modelValue"]);
 
@@ -123,7 +125,7 @@ function handleRemove(removeFile: UploadFile) {
  */
 function handleBeforeUpload(file: UploadRawFile) {
   if (file.size > 2 * 1048 * 1048) {
-    ElMessage.warning("上传图片不能大于2M");
+    ElMessage.warning(t("upload.maxImageSize"));
     return false;
   }
   return true;

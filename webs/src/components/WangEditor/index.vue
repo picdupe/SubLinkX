@@ -21,6 +21,7 @@
 
 <script setup lang="ts">
 import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
+import { useI18n } from "vue-i18n";
 
 // API 引用
 import { uploadFileApi } from "@/api/file";
@@ -33,6 +34,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:modelValue"]);
+const { t } = useI18n();
 
 const modelValue = useVModel(props, "modelValue", emit);
 
@@ -41,7 +43,7 @@ const mode = ref("default"); // 编辑器模式
 const toolbarConfig = ref({}); // 工具条配置
 // 编辑器配置
 const editorConfig = ref({
-  placeholder: "请输入内容...",
+  placeholder: t("common.enterContent"),
   MENU_CONF: {
     uploadImage: {
       // 自定义图片上传

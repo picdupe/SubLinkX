@@ -1,7 +1,7 @@
 <template>
   <el-select
     v-model="selectedValue"
-    :placeholder="placeholder"
+    :placeholder="placeholderText"
     :disabled="disabled"
     clearable
     @change="handleChange"
@@ -17,6 +17,9 @@
 
 <script setup lang="ts">
 import { getDictOptions } from "@/api/dict";
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
 
 const props = defineProps({
   /**
@@ -31,13 +34,15 @@ const props = defineProps({
   },
   placeholder: {
     type: String,
-    default: "请选择",
+    default: undefined,
   },
   disabled: {
     type: Boolean,
     default: false,
   },
 });
+
+const placeholderText = computed(() => props.placeholder || t("common.select"));
 
 const emits = defineEmits(["update:modelValue"]); // 父组件监听事件，同步子组件值的变化给父组件
 

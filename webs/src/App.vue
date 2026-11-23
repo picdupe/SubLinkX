@@ -1,16 +1,12 @@
 <template>
   <el-config-provider :locale="locale" :size="size">
-    <!-- 开启水印 -->
     <el-watermark
-      v-if="watermarkEnabled"
       :font="{ color: fontColor }"
       :content="defaultSettings.watermarkContent"
-      class="wh-full"
+      :class="['wh-full', { 'watermark-disabled': !watermarkEnabled }]"
     >
       <router-view />
     </el-watermark>
-    <!-- 关闭水印 -->
-    <router-view v-else />
   </el-config-provider>
 </template>
 
@@ -34,3 +30,9 @@ const fontColor = computed(() => {
     : "rgba(0, 0, 0, .15)";
 });
 </script>
+
+<style lang="scss" scoped>
+:global(.watermark-disabled > div[style*="background-image"]) {
+  visibility: hidden !important;
+}
+</style>

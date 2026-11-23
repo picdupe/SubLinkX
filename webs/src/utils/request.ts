@@ -1,5 +1,12 @@
 import axios, { InternalAxiosRequestConfig, AxiosResponse } from "axios";
 import { useUserStoreHook } from "@/store/modules/user";
+import i18n from "@/lang";
+
+const t = (key: string) => i18n.global.t(key);
+const localizedResponseMessage = (message?: string) => {
+  if (!message || /[\u4e00-\u9fff]/.test(message)) return t("errors.request");
+  return message;
+};
 
 // 创建 axios 实例
 const service = axios.create({
@@ -34,27 +41,29 @@ service.interceptors.response.use(
       return response;
     }
 
-    ElMessage.error(msg || "系统出错");
-    return Promise.reject(new Error(msg || "Error"));
+    const message = localizedResponseMessage(msg) || t("errors.system");
+    ElMessage.error(message);
+    return Promise.reject(new Error(message));
   },
   (error: any) => {
-    if (error.response.data) {
-      const { code, msg } = error.response.data;
-      // token 过期,重新登录
-      if (code === "A0230") {
-        ElMessageBox.confirm("当前页面已失效，请重新登录", "提示", {
-          confirmButtonText: "确定",
-          cancelButtonText: "取消",
-          type: "warning",
-        }).then(() => {
-          const userStore = useUserStoreHook();
-          userStore.resetToken().then(() => {
-            location.reload();
-          });
-        });
-      } else {
-        ElMessage.error(msg || "系统出错");
-      }
+    const response = error?.response;
+    if (!response) {
+      const message = t("errors.network");
+      ElMessage.error(message);
+      return Promise.reject(error?.message || error);
+    }
+    const { code, msg } = response.data || {};
+    // 后端对过期或签名错误的 JWT 返回 HTTP 401。
+    if (response.status === 401 || code === "A0230" || code === 401) {
+      localStorage.removeItem("accessToken");
+      const userStore = useUserStoreHook();
+      userStore.resetToken().finally(() => {
+        if (location.pathname !== "/login") {
+          location.href = "/login";
+        }
+      });
+    } else {
+      ElMessage.error(localizedResponseMessage(msg) || t("errors.system"));
     }
     return Promise.reject(error.message);
   }

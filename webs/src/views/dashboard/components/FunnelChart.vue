@@ -5,6 +5,8 @@
 
 <script setup lang="ts">
 import * as echarts from "echarts";
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 
 const props = defineProps({
   id: {
@@ -30,7 +32,7 @@ const props = defineProps({
 const options = {
   title: {
     show: true,
-    text: "订单线索转化漏斗图",
+    text: t('charts.conversionFunnel'),
     x: "center",
     padding: 15,
     textStyle: {

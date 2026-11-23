@@ -10,7 +10,7 @@ const iconName = ref("edit");
       type="primary"
       target="_blank"
       class="mb-10"
-      >示例源码 请点击>>>></el-link
+      >{{ $t('demo.sourceLink') }}</el-link
     >
     <icon-select v-model="iconName" />
   </div>

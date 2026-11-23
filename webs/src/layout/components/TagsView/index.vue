@@ -32,27 +32,27 @@
     >
       <li @click="refreshSelectedTag(selectedTag)">
         <svg-icon icon-class="refresh" />
-        刷新
+        {{ $t('tagsView.refresh') }}
       </li>
       <li v-if="!isAffix(selectedTag)" @click="closeSelectedTag(selectedTag)">
         <svg-icon icon-class="close" />
-        关闭
+        {{ $t('tagsView.close') }}
       </li>
       <li @click="closeOtherTags">
         <svg-icon icon-class="close_other" />
-        关闭其它
+        {{ $t('tagsView.closeOthers') }}
       </li>
       <li v-if="!isFirstView()" @click="closeLeftTags">
         <svg-icon icon-class="close_left" />
-        关闭左侧
+        {{ $t('tagsView.closeLeft') }}
       </li>
       <li v-if="!isLastView()" @click="closeRightTags">
         <svg-icon icon-class="close_right" />
-        关闭右侧
+        {{ $t('tagsView.closeRight') }}
       </li>
       <li @click="closeAllTags(selectedTag)">
         <svg-icon icon-class="close_all" />
-        关闭所有
+        {{ $t('tagsView.closeAll') }}
       </li>
     </ul>
   </div>
@@ -374,61 +374,92 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .tags-container {
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
   width: 100%;
   height: 34px;
-  background-color: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-light);
-  box-shadow: 0 1px 1px var(--el-box-shadow-light);
+	padding: 0 clamp(6px, .7vw, 12px);
+	border-bottom: 1px solid #e1e5e8;
+	background: rgb(246 247 248 / 96%);
+	backdrop-filter: blur(14px) saturate(140%);
+	-webkit-backdrop-filter: blur(14px) saturate(140%);
 
   .tags-item {
-    display: inline-block;
-    padding: 3px 8px;
-    margin: 4px 0 0 5px;
+		display: inline-flex;
+		height: 26px;
+		align-items: center;
+		gap: 6px;
+		padding: 0 10px;
+		margin: 0 4px 0 0;
     font-size: 12px;
+		line-height: 1;
+		white-space: nowrap;
     cursor: pointer;
-    border: 1px solid var(--el-border-color-light);
+		border: 1px solid transparent;
+		border-radius: var(--app-radius);
+		background: rgb(248 250 252 / 88%);
+		color: #64748b;
+		transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
 
     &:hover {
-      color: var(--el-color-primary);
+		border-color: #b9dcff;
+			background: #fff;
+			color: #2488ee;
     }
 
     &:first-of-type {
-      margin-left: 15px;
+			margin-left: 2px;
     }
 
     &:last-of-type {
-      margin-right: 15px;
+			margin-right: 2px;
     }
 
     .close-icon {
-      border-radius: 50%;
+			border-radius: var(--app-radius);
+			color: #94a3b8;
 
       &:hover {
-        color: #fff;
-        background-color: var(--el-color-primary);
+				color: #2488ee;
+				background-color: #e5f2ff;
       }
     }
 
     &.active {
-      color: #fff;
-      background-color: var(--el-color-primary);
+			border-color: #409eff;
+			background: #409eff;
+			color: #fff;
+			font-weight: 650;
 
       &::before {
         display: inline-block;
-        width: 8px;
-        height: 8px;
-        margin-right: 5px;
+				width: 6px;
+				height: 6px;
         content: "";
-        background: #fff;
+				background: #fff;
         border-radius: 50%;
       }
 
       .close-icon:hover {
-        color: var(--el-color-primary);
-        background-color: var(--el-fill-color-light);
+				color: #fff;
+				background-color: rgb(255 255 255 / 22%);
       }
     }
   }
+}
+
+html.dark .tags-container {
+	border-bottom-color: rgb(148 163 184 / 14%);
+	background: rgb(15 23 42 / 64%);
+
+	.tags-item {
+		background: rgb(30 41 59 / 58%);
+		color: #a8b3c5;
+
+		&:hover { border-color: rgb(96 165 250 / 30%); background: rgb(30 41 59 / 84%); color: #93c5fd; }
+		&.active { border-color: rgb(96 165 250 / 30%); background: rgb(37 99 235 / 20%); color: #93c5fd; }
+	}
 }
 
 .contextmenu {
@@ -436,7 +467,7 @@ onMounted(() => {
   z-index: 99;
   font-size: 12px;
   background: var(--el-bg-color-overlay);
-  border-radius: 4px;
+	border-radius: var(--app-radius);
   box-shadow: var(--el-box-shadow-light);
 
   li {
@@ -460,7 +491,7 @@ onMounted(() => {
   }
 
   .el-scrollbar__wrap {
-    height: 49px;
+		height: 34px;
   }
 }
 </style>

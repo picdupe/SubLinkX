@@ -1,10 +1,12 @@
 <template>
-  <el-icon v-if="icon && icon.startsWith('el-icon')" class="sub-el-icon">
-    <component :is="icon.replace('el-icon-', '')" />
-  </el-icon>
-  <svg-icon v-else-if="icon" :icon-class="icon" />
-  <svg-icon v-else icon-class="menu" />
-  <span v-if="title" class="ml-1">{{ translateRouteTitle(title) }}</span>
+  <span class="sidebar-menu-icon">
+    <el-icon v-if="icon && icon.startsWith('el-icon')" class="sub-el-icon">
+      <component :is="icon.replace('el-icon-', '')" />
+    </el-icon>
+    <svg-icon v-else-if="icon" :icon-class="icon" size="18px" />
+    <svg-icon v-else icon-class="menu" size="18px" />
+  </span>
+  <span v-if="title" class="sidebar-menu-label">{{ translateRouteTitle(title) }}</span>
 </template>
 
 <script setup lang="ts">
@@ -24,19 +26,32 @@ defineProps({
 
 <style lang="scss" scoped>
 .sub-el-icon {
-  width: 14px !important;
+  width: 18px !important;
+  height: 18px;
   margin-right: 0 !important;
-  font-size: 14px !important;
+  font-size: 18px !important;
   color: currentcolor;
 }
 
-.hideSidebar {
-  .el-sub-menu,
-  .el-menu-item {
-    .svg-icon,
-    .sub-el-icon {
-      margin-left: 20px;
-    }
-  }
+.sidebar-menu-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  align-items: center;
+  justify-content: center;
 }
+
+.sidebar-menu-label {
+  display: inline-block;
+  max-width: 180px;
+  overflow: hidden;
+  margin-left: 35px;
+  opacity: 1;
+  white-space: nowrap;
+  transition:
+    max-width 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 300ms ease-in-out;
+}
+
 </style>

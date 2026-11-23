@@ -1,7 +1,10 @@
 <script setup lang='ts'>
 import { ref,onMounted,nextTick  } from 'vue'
+import { useI18n } from 'vue-i18n'
+import type { TableInstance } from 'element-plus'
 import {getNodes,AddNodes,DelNode,UpdateNode,GetGroup,SetGroup} from "@/api/subcription/node"
-import type { ElTable } from 'element-plus'
+
+const { t } = useI18n()
 
 interface GroupNode {
   ID: number;
@@ -31,7 +34,7 @@ const dialogMode = ref<'add' | 'edit'>('add');
 
 // --- 表格选择与操作相关数据 ---
 const multipleSelection = ref<Node[]>([]); // Stores selected table items
-const multipleTable = ref<InstanceType<typeof ElTable> | null>(null)
+const multipleTable = ref<TableInstance | null>(null)
 
 
 const tableRefs = ref<{ [key: string]: any }>({}); // Stores references to each el-table
@@ -43,7 +46,7 @@ const tableData = ref<Node[]>([])
 // 分组列表临时存放数据
 const tableDataTemp = ref<Node[]>([])
 // 分组列表临时存放数据
-const activeName = ref('全部')
+const activeName = ref('all')
 const Nodedialog = ref (false); // 弹窗是否可见
 const Groupdialog = ref (false); // 弹窗是否可见
 const NodeForm = ref<NodeInfo>({
@@ -101,7 +104,7 @@ const handleAddNode = () => {
   dialogMode.value = 'add';
   Nodedialog.value = true;
   NodeForm.value = {
-    Title: '添加节点',
+    Title: t('nodes.addTitle'),
     Name: '',
     Link: '',
     GroupName: [],
@@ -117,7 +120,7 @@ const handleEditNode = (row: Node) => {
   Nodedialog.value = true;
   NodeForm.value = {
     ID: row.ID,
-    Title: '编辑节点',
+    Title: t('nodes.editTitle'),
     Name: row.Name,
     Link: row.Link,
     GroupName: (row.GroupNodes || []).map(g => g.Name),
@@ -129,7 +132,7 @@ const SubmitNodeForm = async (row:any) => {
   const isAdd = dialogMode.value === 'add';
   let links = NodeForm.value.Link.trim().split(/[\n,]/).map(item => item.trim()).filter(item => item);
   if (isAdd && links.length === 0) {
-    ElMessage.warning('节点链接不能为空');
+    ElMessage.warning(t('nodes.nodeLinkRequired'));
     return;
   }
 
@@ -141,7 +144,7 @@ const SubmitNodeForm = async (row:any) => {
           group: RadioGroup.value === '1' ? SelectionNodeGroups.value.join(',') : NodeGroupInput.value,
         });
       }
-      ElMessage.success('节点添加成功');
+      ElMessage.success(t('nodes.addSuccess'));
     } else {
       await UpdateNode({
         id:NodeForm.value.ID,
@@ -149,12 +152,12 @@ const SubmitNodeForm = async (row:any) => {
         link: NodeForm.value.Link, // 新链接
         group: RadioGroup.value === '1' ? SelectionNodeGroups.value.join(',') : NodeGroupInput.value,
       });
-      ElMessage.success('节点更新成功');
+      ElMessage.success(t('nodes.updateSuccess'));
     }
 
 
   } catch (err) {
-    ElMessage.error(`${isAdd ? '添加' : '更新'}失败`);
+    ElMessage.error(t('nodes.saveFailed', { action: t(isAdd ? 'nodes.addAction' : 'nodes.updateAction') }));
   }
   getnodes();
   GetGroups();
@@ -202,11 +205,11 @@ const AddGroup = async() => {
     console.log(RadioGroup.value, SelectionNodeGroups.value, NodeGroupInput.value);
     
     if (RadioGroup.value === "1" && SelectionNodeGroups.value.length === 0) {
-      ElMessage.warning('你还没有选择分组');
+      ElMessage.warning(t('nodes.noGroupsSelected'));
       return;
     }
     if (RadioGroup.value === "2"&&NodeGroupInput.value.trim() === '') {
-      ElMessage.warning('创建的分组名不能为空');
+      ElMessage.warning(t('nodes.groupNameRequired'));
       return;
   }
       if (SelectionNode.value.length > 0) { // 如果没有选择节点
@@ -215,11 +218,11 @@ const AddGroup = async() => {
       group: RadioGroup.value == '1' ?SelectionNodeGroups.value.join(','):NodeGroupInput.value, // 条件选择已有节点|创建分组
       };
       await SetGroup(newNode).then(() => {
-      ElMessage.success('分组绑定成功');
+      ElMessage.success(t('nodes.groupBindSuccess'));
             });
     }
   } catch (error) {
-    console.error('添加分组失败:', error);
+    console.error('Failed to add group:', error);
     // ElMessage.error('添加分组失败');
   }
   getnodes(); // 刷新节点列表
@@ -250,7 +253,7 @@ const  handleShownodeGroupList =()=>{
 const Groupformatter = (row:any,cellValue:any) =>{
   const data = row.GroupNodes || [];
   if (!Array.isArray(data) || data.length === 0) {
-    return '未分组'; // 如果没有分组，返回默认值
+    return t('nodes.ungrouped'); // 如果没有分组，返回默认值
   }
  return data.map((group: any) => group.Name).join(', ');
 }
@@ -259,11 +262,11 @@ const copyUrl = (url: string) => {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(url)
       .then(() => {
-        ElMessage.success('链接已复制到剪贴板！');
+        ElMessage.success(t('nodes.copied'));
       })
       .catch(err => {
-        console.error('复制失败:', err);
-        ElMessage.error('复制失败！请手动复制。');
+        console.error('Copy failed:', err);
+        ElMessage.error(t('nodes.copyFailed'));
       });
   } else {
     const textarea = document.createElement('textarea');
@@ -272,9 +275,9 @@ const copyUrl = (url: string) => {
     textarea.select();
     try {
       document.execCommand('copy');
-      ElMessage.success('链接已复制到剪贴板！');
+      ElMessage.success(t('nodes.copied'));
     } catch (err) {
-      ElMessage.warning('复制失败！');
+      ElMessage.warning(t('nodes.copyFailed'));
     } finally {
       document.body.removeChild(textarea);
     }
@@ -287,20 +290,20 @@ const copyInfo = (row: Node) => {
 const handleDel = async (row: Node) => {
   try {
     await ElMessageBox.confirm(
-      `你是否要删除 ${row.Name} ?`,
-      '提示',
+      t('nodes.deletePrompt', { name: row.Name }),
+      t('common.deletePrompt'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
         type: 'warning',
       }
     );
     await DelNode({ id: row.ID });
-    ElMessage.success('删除成功');
+    ElMessage.success(t('nodes.deleteSuccess'));
   } catch (error) {
     if (error !== 'cancel') {
-      console.error("删除失败:", error);
-      ElMessage.error('删除失败！');
+      console.error("Delete failed:", error);
+      ElMessage.error(t('nodes.deleteFailed'));
     }
   }
   // 刷新节点列表
@@ -311,16 +314,16 @@ const handleDel = async (row: Node) => {
 const selectDel = async () => {
   
   if (multipleSelection.value.length === 0) {
-    ElMessage.warning('请选择要删除的节点！');
+    ElMessage.warning(t('nodes.selectDelete'));
     return;
   }
   try {
     await ElMessageBox.confirm(
-      `你是否要删除选中的 ${multipleSelection.value.length} 条节点 ?`,
-      '提示',
+      t('nodes.deleteSelectedPrompt', { count: multipleSelection.value.length }),
+      t('common.deletePrompt'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
         type: 'warning',
       }
     );
@@ -331,15 +334,15 @@ const selectDel = async () => {
       await DelNode({ id: item.ID });
        IDs.push(item.ID); // 收集所有已删除的节点ID
     }
-    ElMessage.success('批量删除成功');
+    ElMessage.success(t('nodes.batchDeleteSuccess'));
     // 从 tableData 中删除已删除的节点
     tableData.value = tableData.value.filter(item => !IDs.includes(item.ID));
 ; 
 
   } catch (error) {
     if (error !== 'cancel') {
-      console.error("批量删除失败:", error);
-      ElMessage.error('批量删除失败！');
+      console.error("Batch delete failed:", error);
+      ElMessage.error(t('nodes.batchDeleteFailed'));
     }
   }
     // 刷新节点列表
@@ -378,15 +381,15 @@ const setTableRef = (el: any, name: string) => {
 //批量复制
 const selectCopy = async () => {
   if (multipleSelection.value.length === 0) {
-    ElMessage.warning('请选择要复制的节点！');
+    ElMessage.warning(t('nodes.selectCopy'));
     return;
   }
   try {
     copyUrl(multipleSelection.value.map(item => item.Link).join('\n'));
   } catch (error) {
     if (error !== 'cancel') {
-      console.error("批量复制失败:", error);
-      ElMessage.error('批量复制失败');
+      console.error("Batch copy failed:", error);
+      ElMessage.error(t('nodes.batchCopyFailed'));
     }
   }
 };
@@ -395,7 +398,7 @@ const handleSelectionChange = (val: Node[]) => {
 };
 
 watch(activeName, (newVal) => {
-  if (newVal === '全部') {
+  if (newVal === 'all') {
     tableData.value = tableDataTemp.value;
   } else {
     tableData.value = tableDataTemp.value.filter(item => {
@@ -408,11 +411,11 @@ watch(activeName, (newVal) => {
 </script>
 
 <template>
-  <div>
- <el-dialog v-model="Nodedialog" :title="NodeForm.Title" width="80%">
+  <div class="management-page">
+ <el-dialog v-model="Nodedialog" :title="NodeForm.Title" width="min(720px, 94vw)">
   <el-input
     v-model="NodeForm.Link"
-    placeholder="请输入节点链接，支持多行使用回车或逗号分开"
+    :placeholder="$t('nodes.linkPlaceholder')"
     type="textarea"
     style="margin-bottom: 10px"
     :autosize="{ minRows: 2, maxRows: 10 }"
@@ -421,13 +424,13 @@ watch(activeName, (newVal) => {
 
 <el-input
   v-model="NodeForm.Name"
-  placeholder="节点名称（编辑时）"
+  :placeholder="$t('nodes.namePlaceholder')"
   style="margin-bottom: 10px"
   v-if="dialogMode === 'edit'"
 />
   <el-input
     v-model="NodeForm.Link"
-    placeholder="请输入节点链接，支持多行使用回车或逗号分开"
+    :placeholder="$t('nodes.linkPlaceholder')"
     type="textarea"
     style="margin-bottom: 10px"
     :autosize="{ minRows: 2, maxRows: 10 }"
@@ -435,33 +438,36 @@ watch(activeName, (newVal) => {
   />
 
   <!-- 分组部分 -->
-  <el-radio v-model="RadioGroup" label="1" v-if="allGroupNames.length > 0">选择已有分组</el-radio>
-  <el-radio v-model="RadioGroup" label="2">创建新分组</el-radio>
+  <el-radio v-model="RadioGroup" label="1" v-if="allGroupNames.length > 0">{{ $t('nodes.chooseGroups') }}</el-radio>
+  <el-radio v-model="RadioGroup" label="2">{{ $t('nodes.createGroup') }}</el-radio>
 
   <div v-if="RadioGroup === '1' && allGroupNames.length > 0">
-    <el-select v-model="SelectionNodeGroups" multiple placeholder="选择已有分组" class="default">
+    <el-select v-model="SelectionNodeGroups" multiple :placeholder="$t('nodes.groupPlaceholder')" class="default">
       <el-option v-for="item in allGroupNames" :key="item" :label="item" :value="item" />
     </el-select>
   </div>
 
-  <el-input v-if="RadioGroup === '2'" v-model="NodeGroupInput" placeholder="输入要创建的分组名" class="default" />
+  <el-input v-if="RadioGroup === '2'" v-model="NodeGroupInput" :placeholder="$t('nodes.groupNamePlaceholder')" class="default" />
 
-  <el-button type="primary" @click="SubmitNodeForm">{{ dialogMode === 'add' ? '添加' : '更新' }}</el-button>
-  <el-button @click="Nodedialog = false">取消</el-button>
+  <el-button type="primary" @click="SubmitNodeForm">{{ $t(dialogMode === 'add' ? 'nodes.addAction' : 'nodes.updateAction') }}</el-button>
+  <el-button @click="Nodedialog = false">{{ $t('common.cancel') }}</el-button>
 </el-dialog>
 
 
   <!-- 显示表格数据 -->
-  <el-card>
+  <el-card class="management-card" shadow="never">
     <el-tabs v-model="activeName" >
-      <el-tab-pane :label="`全部(${allNodes.length})`" name="全部" />
+      <el-tab-pane :label="$t('nodes.all') + `(${allNodes.length})`" name="all" />
       <el-tab-pane :label="item" :name="item" v-for="item in allGroupNames" :key="item" />
     </el-tabs>
-      <el-button type="primary" @click="handleAddNode">添加节点</el-button>
+      <div class="management-toolbar">
+        <el-button type="primary" @click="handleAddNode">{{ $t('nodes.add') }}</el-button>
+      </div>
       <div style="margin-bottom: 10px"></div>
       <el-table
       ref="multipleTable"
     :data="tableData"
+    :fit="true"
     tooltip-effect="dark"
     stripe
     style="width: 100%"
@@ -471,7 +477,7 @@ watch(activeName, (newVal) => {
     >
         <el-table-column
       type="selection"
-      width="55">
+      fixed>
     </el-table-column>
 
     <el-table-column
@@ -480,7 +486,7 @@ watch(activeName, (newVal) => {
     </el-table-column>
     <el-table-column
       prop="Name"
-      label="节点名"
+      :label="$t('nodes.name')"
       sortable
       >
     <template #default="{row}">
@@ -489,40 +495,42 @@ watch(activeName, (newVal) => {
     </el-table-column>
     <el-table-column
       prop="Link"
-      label="链接"
+      :label="$t('nodes.link')"
       :show-overflow-tooltip="true"
       >
           <template #default="{row}">
-      <el-tag effect="plain" type="success" >{{row.Link}}</el-tag>
+      <el-tag class="node-link-tag" effect="plain" type="success">{{row.Link}}</el-tag>
         </template>
     </el-table-column>
     
         <el-table-column
       prop="CreatedAt"
-      label="创建时间"
+      :label="$t('nodes.createdAt')"
       :formatter="Timeformatter"
       sortable
       show-overflow-tooltip>
     </el-table-column>
             <el-table-column
-      label="所属分组"
+      :label="$t('nodes.groups')"
       :formatter="Groupformatter"
       show-overflow-tooltip>
     </el-table-column>
-                <el-table-column  label="操作" width="120">
+                <el-table-column :label="$t('nodes.actions')" fixed="right" width="120">
               <template #default="scope">
-                <el-button link type="primary" size="small" @click="handleEditNode(scope.row)">编辑</el-button>
-                <el-button link type="primary" size="small" @click="copyInfo(scope.row)">复制</el-button>
-                <el-button link type="primary" size="small" @click="handleDel(scope.row)">删除</el-button>
+                <div class="node-row-actions">
+                  <el-button link type="primary" size="small" @click="handleEditNode(scope.row as Node)">{{ $t('common.edit') }}</el-button>
+                  <el-button link type="primary" size="small" @click="copyInfo(scope.row as Node)">{{ $t('common.copy') }}</el-button>
+                  <el-button link type="primary" size="small" @click="handleDel(scope.row as Node)">{{ $t('common.delete') }}</el-button>
+                </div>
               </template>
             </el-table-column>
   </el-table>
-   <div style="margin-top: 20px" />
-   <el-button type="info" @click="selectAll">全选</el-button>
-   <el-button type="warning" @click="selectClear">取消选中</el-button>
-      <el-button type="primary" @click="selectCopy">复制选中</el-button>
-      <el-button type="danger" @click="selectDel">删除选中</el-button>
-      <div style="margin-top: 20px" />
+   <div class="management-actions">
+   <el-button type="info" @click="selectAll">{{ $t('common.selectAll') }}</el-button>
+   <el-button type="warning" @click="selectClear">{{ $t('common.clearSelection') }}</el-button>
+      <el-button type="primary" @click="selectCopy">{{ $t('common.copySelected') }}</el-button>
+      <el-button type="danger" @click="selectDel">{{ $t('common.deleteSelected') }}</el-button>
+      </div>
   </el-card>
   <!-- 显示表格数据结束 -->
   </div>
@@ -535,4 +543,31 @@ watch(activeName, (newVal) => {
   line-height: 1.6;
   margin-bottom: 10px;
  }
+</style>
+<style scoped>
+.management-page .node-link-tag {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.management-page .node-link-tag :deep(.el-tag__content) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.management-page .node-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.management-page .node-row-actions :deep(.el-button + .el-button) {
+  margin-left: 8px;
+}
 </style>

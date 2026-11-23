@@ -43,6 +43,16 @@ export const constantRoutes: RouteRecordRaw[] = [
         },
       },
       {
+        path: "settings",
+        component: () => import("@/views/settings/index.vue"),
+        name: "Settings",
+        meta: {
+          title: "settingsPage",
+          icon: "setting",
+          keepAlive: true,
+        },
+      },
+      {
         path: "401",
         component: () => import("@/views/error-page/401.vue"),
         meta: { hidden: true },

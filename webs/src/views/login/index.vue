@@ -12,10 +12,13 @@
       <lang-select class="ml-2 cursor-pointer" />
     </div>
     <!-- 登录表单 -->
-    <el-card class="!border-none !bg-transparent !rounded-4% w-100 <sm:w-85">
+    <el-card class="login-card w-100 <sm:w-85">
       <div class="text-center relative">
+        <div class="brand-mark">S</div>
+        <p class="login-eyebrow">SECURE SUBSCRIPTION MANAGEMENT</p>
         <h2>{{ defaultSettings.title }}</h2>
-        <el-tag class="ml-2 absolute-rt">{{ version }}</el-tag>
+        <p class="login-subtitle">{{ $t('login.subtitle') }}</p>
+        <el-tag class="version-tag">{{ version }}</el-tag>
       </div>
 
       <el-form
@@ -29,12 +32,13 @@
           <div class="flex-y-center w-full">
             <svg-icon icon-class="user" class="mx-2" />
             <el-input
-              ref="username"
+              ref="usernameInput"
               v-model="loginData.username"
               :placeholder="$t('login.username')"
               name="username"
               size="large"
               class="h-[48px]"
+              @keyup.enter.prevent="focusPassword"
             />
           </div>
         </el-form-item>
@@ -49,12 +53,13 @@
             <div class="flex-y-center w-full">
               <svg-icon icon-class="lock" class="mx-2" />
               <el-input
+                ref="passwordInput"
                 v-model="loginData.password"
                 :placeholder="$t('login.password')"
                 type="password"
                 name="password"
                 @keyup="checkCapslock"
-                @keyup.enter="handleLogin"
+                @keyup.enter.prevent="focusCaptcha"
                 size="large"
                 class="h-[48px] pr-2"
                 show-password
@@ -68,18 +73,19 @@
           <div class="flex-y-center w-full">
             <svg-icon icon-class="captcha" class="mx-2" />
             <el-input
+              ref="captchaInput"
               v-model="loginData.captchaCode"
               auto-complete="off"
               size="large"
               class="flex-1"
               :placeholder="$t('login.captchaCode')"
-              @keyup.enter="handleLogin"
+              @keyup.enter.prevent="handleLogin"
             />
 
             <el-image
               @click="getCaptcha"
               :src="captchaBase64"
-              class="rounded-tr-md rounded-br-md cursor-pointer h-[48px]"
+              class="cursor-pointer h-[48px]"
             />
           </div>
         </el-form-item>
@@ -138,12 +144,22 @@ const loading = ref(false); // 按钮loading
 const isCapslock = ref(false); // 是否大写锁定
 const captchaBase64 = ref(); // 验证码图片Base64字符串
 const loginFormRef = ref(ElForm); // 登录表单ref
+const passwordInput = ref();
+const captchaInput = ref();
 const { height } = useWindowSize();
 
 const loginData = ref<LoginData>({
   username: "",
   password: "",
 });
+
+function focusPassword() {
+  passwordInput.value?.focus();
+}
+
+function focusCaptcha() {
+  captchaInput.value?.focus();
+}
 
 const loginRules = computed(() => {
   return {
@@ -258,42 +274,51 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-html.dark .login-container {
-  background: url("@/assets/images/login-bg-dark.jpg") no-repeat center right;
-}
-
 .login-container {
-  overflow-y: auto;
-  background: url("@/assets/images/login-bg.jpg") no-repeat center right;
+	position: relative;
+	overflow: hidden;
+	background:
+		radial-gradient(ellipse at 18% 18%, rgb(147 197 253 / 48%), transparent 34%),
+		radial-gradient(ellipse at 82% 78%, rgb(191 219 254 / 55%), transparent 35%),
+		linear-gradient(135deg, #edf5ff 0%, #f8fbff 48%, #e7f0ff 100%);
+	@apply wh-full flex-center;
 
-  @apply wh-full flex-center;
-
-  .login-form {
-    padding: 30px 10px;
-  }
+	&::before, &::after { position: absolute; width: 360px; height: 360px; border: 1px solid rgb(255 255 255 / 75%); border-radius: 50%; content: ""; pointer-events: none; }
+	&::before { top: -170px; right: -100px; box-shadow: 0 0 0 28px rgb(255 255 255 / 13%), 0 0 0 58px rgb(255 255 255 / 10%); }
+	&::after { bottom: -230px; left: -120px; width: 450px; height: 450px; box-shadow: 0 0 0 30px rgb(255 255 255 / 15%); }
+	> :deep(.absolute-lt) { z-index: 2; }
 }
 
-.el-form-item {
-  background: var(--el-input-bg-color);
-  border: 1px solid var(--el-border-color);
-  border-radius: 5px;
+.login-card {
+	position: relative;
+	z-index: 1;
+	width: min(100% - 2rem, 28rem);
+	padding: 18px 24px 12px;
+	border: 1px solid rgb(255 255 255 / 82%) !important;
+	border-radius: var(--app-radius) !important;
+	background: rgb(255 255 255 / 66%) !important;
+	box-shadow: 0 28px 80px rgb(37 99 235 / 13%), inset 0 1px 0 rgb(255 255 255 / 92%) !important;
+	backdrop-filter: blur(24px) saturate(155%);
+	-webkit-backdrop-filter: blur(24px) saturate(155%);
+
+	:deep(.el-card__body) { padding: 18px 16px 22px; }
+	h2 { margin: 6px 0 0; color: #172033; font-size: 27px; font-weight: 720; letter-spacing: -.04em; }
+	.login-eyebrow { margin: 18px 0 0; color: #2488ee; font-size: 10px; font-weight: 750; letter-spacing: .16em; }
+	.login-subtitle { margin: 9px 0 0; color: #718096; font-size: 13px; }
+	.version-tag { position: absolute; top: 0; right: 0; border-color: #b9dcff; background: #eaf4ff; color: #2488ee; }
+	.brand-mark { display: grid; width: 54px; height: 54px; place-items: center; margin: 0 auto; border: 1px solid rgb(255 255 255 / 90%); border-radius: var(--app-radius); background: linear-gradient(145deg, #68b5ff, #409eff); box-shadow: 0 10px 24px rgb(64 158 255 / 28%), inset 0 1px 0 rgb(255 255 255 / 50%); color: white; font-size: 24px; font-weight: 750; }
 }
 
-:deep(.el-input) {
-  .el-input__wrapper {
-    padding: 0;
-    background-color: transparent;
-    box-shadow: none;
-
-    &.is-focus,
-    &:hover {
-      box-shadow: none !important;
-    }
-
-    input:-webkit-autofill {
-      /* 通过延时渲染背景色变相去除背景颜色 */
-      transition: background-color 1000s ease-in-out 0s;
-    }
-  }
-}
+.login-form { padding: 28px 10px 8px; }
+.el-form-item { overflow: hidden; margin-bottom: 16px; border: 1px solid rgb(203 213 225 / 76%); border-radius: var(--app-radius); background: rgb(255 255 255 / 62%); transition: border-color 160ms, box-shadow 160ms; }
+.el-form-item:focus-within { border-color: #73b8ff; box-shadow: 0 0 0 3px rgb(64 158 255 / 16%); }
+.login-form :deep(.el-input__wrapper) { min-height: 48px; padding: 0 12px; background: transparent; box-shadow: none !important; }
+.login-form :deep(.el-input__inner) { color: #1e293b; }
+.login-form :deep(.el-button--primary) { height: 48px; margin-top: 6px; border: 1px solid rgb(255 255 255 / 48%); border-radius: var(--app-radius); background: linear-gradient(110deg, #58adff, #409eff); box-shadow: 0 8px 18px rgb(64 158 255 / 24%); font-weight: 650; }
+.login-form :deep(.el-button--primary:hover) { background: linear-gradient(110deg, #75bcff, #409eff); }
+html.dark .login-container { background: radial-gradient(ellipse at 18% 18%, rgb(30 64 110 / 55%), transparent 34%), radial-gradient(ellipse at 82% 78%, rgb(30 58 100 / 45%), transparent 35%), linear-gradient(135deg, #0b1220, #101a2b 55%, #0c1728); }
+html.dark .login-card { border-color: rgb(148 163 184 / 22%) !important; background: rgb(15 23 42 / 62%) !important; }
+html.dark .login-card h2 { color: #e2e8f0; }
+html.dark .el-form-item { border-color: rgb(148 163 184 / 24%); background: rgb(15 23 42 / 34%); }
+html.dark .login-form :deep(.el-input__inner) { color: #e2e8f0; }
 </style>

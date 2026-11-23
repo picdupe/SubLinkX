@@ -22,30 +22,20 @@
         </div>
       </div>
 
-      <div :class="{ hasTagsView: showTagsView }" class="main-container">
-        <div :class="{ 'fixed-header': fixedHeader }">
-          <TagsView v-if="showTagsView" />
-        </div>
+      <div class="main-container">
         <AppMain />
-        <Settings v-if="defaultSettings.showSettings" />
       </div>
     </div>
 
     <!-- 左侧和顶部布局 -->
-    <div v-else :class="{ hasTagsView: showTagsView }" class="main-container">
-      <div :class="{ 'fixed-header': fixedHeader }">
-        <NavBar v-if="layout === 'left'" />
-        <TagsView v-if="showTagsView" />
-      </div>
+    <div v-else class="main-container">
       <AppMain />
-      <Settings v-if="defaultSettings.showSettings" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useAppStore, useSettingsStore, usePermissionStore } from "@/store";
-import defaultSettings from "@/settings";
 import { DeviceEnum } from "@/enums/DeviceEnum";
 
 const appStore = useAppStore();
@@ -53,7 +43,6 @@ const settingsStore = useSettingsStore();
 const permissionStore = usePermissionStore();
 
 const fixedHeader = computed(() => settingsStore.fixedHeader); // 是否固定header
-const showTagsView = computed(() => settingsStore.tagsView); // 是否显示tagsView
 const layout = computed(() => settingsStore.layout); // 布局模式 left top mix
 const activeTopMenuPath = computed(() => appStore.activeTopMenuPath); // 顶部菜单激活path
 const mixLeftMenus = computed(() => permissionStore.mixLeftMenus); // 混合布局左侧菜单
@@ -112,31 +101,113 @@ function toggleSidebar() {
   right: 0;
   z-index: 9;
   width: calc(100% - $sidebar-width);
-  transition: width 0.28s;
+  transition: width 360ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .sidebar-container {
   position: fixed;
-  top: 0;
-  bottom: 0;
-  left: 0;
+  top: 14px;
+  bottom: 14px;
+  left: 14px;
   z-index: 999;
   width: $sidebar-width;
-  height: 100%;
+  height: auto;
   overflow: hidden;
   background-color: $menu-background;
+	border: 1px solid var(--el-border-color-light);
+	border-radius: 22px;
+	box-shadow: 0 8px 28px rgb(15 23 42 / 7%);
   transition: width 0.28s;
 
   :deep(.el-menu) {
     border: none;
+		padding: 10px 9px;
+		background: transparent;
+		--el-menu-bg-color: transparent;
+		--el-menu-text-color: var(--menu-text);
+		--el-menu-hover-bg-color: var(--menu-hover);
+		--el-menu-active-color: #409eff;
+		--el-menu-item-height: 36px;
+		border-radius: var(--app-radius);
+	}
+
+	html.dark & :deep(.el-menu) {
+		--el-menu-text-color: #a8b3c5;
+		--el-menu-hover-bg-color: rgb(51 65 85 / 55%);
+		--el-menu-active-color: #93c5fd;
+	}
+
+	:deep(.el-menu-item),
+	:deep(.el-sub-menu__title) {
+		margin: 3px 0;
+		border-radius: var(--app-radius);
+		font-weight: 550;
+		transition: color 160ms ease, background 160ms ease;
+	}
+
+	:deep(.el-menu-item.is-active) {
+		background: var(--menu-active-background);
+		color: var(--menu-active-text);
+		font-weight: 650;
+	}
+
+	html.dark & :deep(.el-menu-item.is-active) {
+		background: rgb(64 158 255 / 20%);
+		color: #93c5fd;
+	}
+
+	:deep(.el-menu-item:hover),
+	:deep(.el-sub-menu__title:hover) {
+		background: var(--menu-hover);
   }
+
+	html.dark & :deep(.el-menu-item:hover),
+	html.dark & :deep(.el-sub-menu__title:hover) {
+		background: rgb(51 65 85 / 55%);
+	}
+}
+
+.layout-left .sidebar-container {
+	:deep(.sidebar-menu-scroll .el-menu) {
+		padding-right: 0;
+		padding-left: 0;
+	}
+
+	:deep(.sidebar-menu-scroll .el-menu > a) {
+		display: flex;
+		width: 100%;
+	}
+
+	:deep(.sidebar-menu-scroll .el-menu-item) {
+		padding-left: 0;
+	}
+
+	:deep(.sidebar-menu-scroll .el-menu .el-menu-item) {
+		position: relative;
+	}
+
+	:deep(.sidebar-menu-scroll .el-menu .el-menu-item .sidebar-menu-icon) {
+		position: absolute;
+		left: 9px;
+		top: 50%;
+		transform: translateY(-50%);
+	}
+}
+
+.layout-left:not(.hideSidebar) .sidebar-container {
+	:deep(.sidebar-menu-label) {
+		transition-delay: 80ms;
+	}
 }
 
 .main-container {
   position: relative;
   min-height: 100%;
-  margin-left: $sidebar-width;
-  transition: margin-left 0.28s;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 14px 12px;
+  margin-left: calc($sidebar-width + 14px);
+  transition: margin-left 360ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .layout-top {
@@ -236,6 +307,7 @@ function toggleSidebar() {
     .main-container {
       flex: 1;
       min-width: 0;
+    padding: 14px;
       margin-left: 0;
 
       .fixed-header {
@@ -252,8 +324,77 @@ function toggleSidebar() {
   }
 
   .main-container {
-    margin-left: $sidebar-width-collapsed;
+    margin-left: calc($sidebar-width-collapsed + 14px);
   }
+
+	.sidebar-container {
+		:deep(.sidebar-menu-scroll .el-menu) {
+			box-sizing: border-box;
+			width: 100%;
+			padding-right: 0;
+			padding-left: 0;
+		}
+
+		:deep(.sidebar-menu-scroll .el-menu > a) {
+			position: relative;
+			display: flex;
+			width: 100%;
+		}
+
+		:deep(.sidebar-menu-scroll .el-menu .el-menu-item) {
+			box-sizing: border-box;
+			position: relative;
+			width: 36px;
+			height: 36px;
+			min-height: 36px;
+			margin-right: 0;
+			margin-left: 0;
+			padding-right: 0;
+			padding-left: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			border-radius: 50% !important;
+			line-height: 36px;
+		}
+
+		:deep(.sidebar-menu-scroll .el-scrollbar__wrap) {
+			overflow-x: hidden;
+		}
+
+		:deep(.sidebar-menu-scroll .el-scrollbar__bar.is-horizontal) {
+			display: none;
+		}
+
+		:deep(.sidebar-menu-scroll .el-menu .el-menu-item .sidebar-menu-icon) {
+			position: absolute;
+			left: 9px;
+			top: 50%;
+			transform: translateY(-50%);
+		}
+
+		:deep(.sidebar-menu-scroll .el-menu .el-menu-item .svg-icon),
+		:deep(.sidebar-menu-scroll .el-menu .el-menu-item .sub-el-icon) {
+			margin-right: 0 !important;
+			margin-left: 0 !important;
+		}
+
+		:deep(.sidebar-menu-scroll .el-menu .el-menu-item .svg-icon) {
+			flex: 0 0 18px;
+			width: 18px !important;
+			height: 18px !important;
+		}
+
+		:deep(.sidebar-menu-scroll .el-menu .el-menu-item .sub-el-icon) {
+			width: 18px !important;
+			font-size: 18px !important;
+		}
+
+		:deep(.sidebar-brand-footer) {
+			padding-right: 0;
+			padding-left: 0;
+		}
+	}
 
   &.layout-top {
     .fixed-header {
@@ -290,20 +431,36 @@ function toggleSidebar() {
   }
 
   .main-container {
-    margin-left: $sidebar-width-collapsed;
+    width: calc(100% - #{$sidebar-width-collapsed + 14px});
+    margin-left: calc($sidebar-width-collapsed + 14px);
   }
 
   &.mobile {
     .sidebar-container {
-      pointer-events: none;
-      transition-duration: 0.3s;
-      transform: translate3d(-210px, 0, 0);
+      width: $sidebar-width-collapsed !important;
+      pointer-events: auto;
+      transform: none;
     }
 
     .main-container {
-      margin-left: 0;
+      width: calc(100% - #{$sidebar-width-collapsed + 10px});
+      padding: 10px;
+      margin-left: calc($sidebar-width-collapsed + 10px);
     }
   }
+}
+
+@media (max-width: 992px) {
+	.sidebar-container {
+		top: 10px;
+		bottom: 10px;
+		left: 10px;
+		border-radius: 18px;
+	}
+
+	.main-container {
+		padding: 10px;
+	}
 }
 
 .mobile {
@@ -313,6 +470,8 @@ function toggleSidebar() {
   }
 
   .main-container {
+    width: 100%;
+    padding: 14px;
     margin-left: 0;
   }
 

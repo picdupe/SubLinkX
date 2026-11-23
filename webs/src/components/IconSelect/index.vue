@@ -3,7 +3,7 @@
     <el-input
       v-model="selectedIcon"
       readonly
-      placeholder="点击选择图标"
+      :placeholder="$t('iconSelect.choose')"
       @click="popoverVisible = !popoverVisible"
     >
       <template #prepend>
@@ -38,12 +38,12 @@
       <div ref="popoverContentRef">
         <el-input
           v-model="searchText"
-          placeholder="搜索图标"
+          :placeholder="$t('iconSelect.search')"
           clearable
           @input="filterIcons"
         />
         <el-tabs v-model="activeTab" @tab-click="handleTabClick">
-          <el-tab-pane label="SVG 图标" name="svg">
+          <el-tab-pane :label="$t('iconSelect.svg')" name="svg">
             <el-scrollbar height="300px">
               <ul class="flex flex-wrap">
                 <li
@@ -59,7 +59,7 @@
               </ul>
             </el-scrollbar>
           </el-tab-pane>
-          <el-tab-pane label="Element 图标" name="element">
+          <el-tab-pane :label="$t('iconSelect.element')" name="element">
             <el-scrollbar height="300px">
               <ul class="flex flex-wrap">
                 <li

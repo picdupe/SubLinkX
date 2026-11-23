@@ -2,7 +2,18 @@
   <div v-if="!item.meta || !item.meta.hidden">
     <!-- 显示具有单个子路由的菜单项或没有子路由的父路由 -->
     <template
-      v-if="
+      v-if="item.path === '/subcription' && !item.meta?.alwaysShow && item.children?.length"
+    >
+      <SidebarMenuItem
+        v-for="child in item.children.filter((route: any) => !route.meta?.hidden)"
+        :key="child.path"
+        :item="child"
+        :base-path="resolvePath(child.path)"
+      />
+    </template>
+
+    <template
+      v-else-if="
         hasOneShowingChild(item.children, item as RouteRecordRaw) &&
         (!onlyOneChild.children || onlyOneChild.noShowingChildren) &&
         !item.meta?.alwaysShow
@@ -147,12 +158,9 @@ function resolvePath(routePath: string) {
       }
     }
 
-    & > span {
-      display: inline-block;
-      width: 0;
-      height: 0;
-      overflow: hidden;
-      visibility: hidden;
+		.sidebar-menu-label {
+			max-width: 0;
+			opacity: 0;
     }
   }
 
@@ -177,12 +185,10 @@ function resolvePath(routePath: string) {
 
     .el-sub-menu {
       & > .el-sub-menu__title {
-        & > span {
-          display: inline-block;
-          width: 0;
-          height: 0;
-          overflow: hidden;
-          visibility: hidden;
+				.sidebar-menu-label {
+					max-width: 0;
+					margin-left: 0;
+					opacity: 0;
         }
       }
     }

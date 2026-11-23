@@ -1,16 +1,290 @@
 @use "./reset";
 
 .app-container {
-  padding: 10px;
+	padding: 26px;
+}
+
+.management-page {
+	box-sizing: border-box;
+	width: 100%;
+	min-width: 0;
+	padding: 0;
+}
+
+.management-card {
+	box-sizing: border-box;
+	width: 100%;
+	min-width: 0;
+	border: 1px solid #e0e4e7;
+	border-radius: var(--app-radius);
+	background: rgb(255 255 255 / 96%);
+	box-shadow: 0 8px 22px rgb(37 49 63 / 6%), inset 0 1px 0 rgb(255 255 255 / 95%);
+	backdrop-filter: blur(18px) saturate(140%);
+	-webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.management-toolbar,
+.management-actions,
+.management-footer {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	gap: 10px;
+}
+
+.management-toolbar {
+	justify-content: space-between;
+	margin-bottom: 14px;
+}
+
+.management-actions {
+	flex-wrap: wrap;
+	margin-top: 16px;
+}
+
+.management-footer {
+	justify-content: flex-start;
+	margin-top: 18px;
+}
+
+.management-footer .el-pagination {
+	max-width: 100%;
+	flex-wrap: wrap;
+}
+
+.management-card .el-table {
+	width: 100%;
+	--el-table-border-color: #e5e8eb;
+	--el-table-header-bg-color: #f4f6f7;
+	--el-table-row-hover-bg-color: #f4f8f7;
+}
+
+.management-card .el-table th.el-table__cell {
+	height: 46px;
+	background: #f4f6f7;
+	font-weight: 650;
+}
+
+.management-card .el-table td.el-table__cell {
+	padding: 11px 0;
+}
+
+.management-card .el-table .cell {
+	line-height: 1.55;
+}
+
+html.dark .management-card {
+	border-color: rgb(148 163 184 / 14%);
+	background: rgb(15 23 42 / 65%);
+}
+
+html.dark .management-card .el-table {
+	--el-table-border-color: rgb(148 163 184 / 14%);
+	--el-table-header-bg-color: rgb(30 41 59 / 72%);
+	--el-table-row-hover-bg-color: rgb(30 41 59 / 55%);
+}
+
+html.dark .management-card .el-table th.el-table__cell {
+	background: rgb(30 41 59 / 72%);
 }
 
 .search-container {
-  padding: 18px 0 0 10px;
+	padding: 18px;
   margin-bottom: 10px;
   background-color: var(--el-bg-color-overlay);
   border: 1px solid var(--el-border-color-light);
-  border-radius: 4px;
+	border-radius: var(--app-radius);
   box-shadow: var(--el-box-shadow-light);
+}
+
+html,
+body,
+#app {
+	min-width: 320px;
+	min-height: 100%;
+}
+
+body {
+	color: var(--el-text-color-primary);
+	background: var(--el-bg-color-page);
+	-webkit-font-smoothing: antialiased;
+}
+
+.el-card {
+	--el-card-border-color: var(--el-border-color-light);
+	border-radius: var(--app-radius);
+	box-shadow: 0 8px 28px rgb(15 23 42 / 4%);
+}
+
+.el-button {
+	font-weight: 600;
+	transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.el-button--primary:not(.is-disabled):hover {
+	box-shadow: 0 6px 16px rgb(64 158 255 / 26%);
+	transform: translateY(-1px);
+}
+
+.el-overlay {
+	background: rgb(15 23 42 / 48%);
+	backdrop-filter: blur(3px);
+	-webkit-backdrop-filter: blur(3px);
+}
+
+.el-dialog,
+.el-message-box {
+	box-sizing: border-box;
+	max-width: calc(100vw - 32px);
+	border: 1px solid var(--el-border-color-light);
+	border-radius: var(--app-radius);
+	background: var(--el-bg-color-overlay);
+	box-shadow: 0 20px 56px rgb(15 23 42 / 18%), inset 0 1px 0 rgb(255 255 255 / 76%);
+}
+
+.el-dialog__header {
+	margin-right: 0;
+	padding: 20px 24px 12px;
+	color: var(--el-text-color-primary);
+}
+
+.el-dialog__body {
+	padding: 18px 24px;
+	color: var(--el-text-color-regular);
+}
+
+.el-dialog__footer {
+	padding: 8px 24px 22px;
+}
+
+.el-message-box {
+	width: min(440px, calc(100vw - 32px));
+	padding: 0 0 18px;
+}
+
+.el-message-box__header {
+	padding: 18px 22px 8px;
+}
+
+.el-message-box__title {
+	color: var(--el-text-color-primary);
+	font-size: 17px;
+	font-weight: 650;
+}
+
+.el-message-box__content {
+	padding: 10px 22px 22px;
+	color: var(--el-text-color-regular);
+}
+
+.el-message-box__status {
+	font-size: 19px !important;
+}
+
+.el-message-box__btns {
+	gap: 10px;
+	padding: 0 22px;
+}
+
+.el-message-box__btns button,
+.el-message-box__btns button + button {
+	margin-left: 0;
+}
+
+html.dark .el-dialog,
+html.dark .el-message-box {
+	border-color: rgb(148 163 184 / 18%);
+	box-shadow: 0 20px 56px rgb(0 0 0 / 36%);
+}
+
+.el-input__wrapper,
+.el-select__wrapper {
+	min-height: 40px;
+	border-radius: var(--app-radius) !important;
+}
+
+/* Keep option hover/selected fills inset from the rounded select popper edge. */
+.el-select__popper.el-popper {
+	height: fit-content !important;
+	min-height: 0 !important;
+	padding: 0 !important;
+}
+
+.el-select__popper .el-select-dropdown,
+.el-select__popper .el-scrollbar,
+.el-select__popper .el-select-dropdown__wrap,
+.el-select__popper .el-select-dropdown__list {
+	height: auto !important;
+	min-height: 0 !important;
+}
+
+.el-select__popper .el-select-dropdown__list {
+	padding: 6px 8px;
+}
+
+.el-select__popper .el-select-dropdown__wrap {
+	max-height: 274px;
+	overflow-y: auto;
+}
+
+.el-select__popper .el-select-dropdown__item {
+	border-radius: 10px;
+}
+
+/* One shared corner radius across app surfaces and Element Plus controls. */
+:where(
+	.el-button,
+	.el-input__wrapper,
+	.el-select__wrapper,
+	.el-textarea__inner,
+	.el-card,
+	.el-dialog,
+	.el-message-box,
+	.el-drawer,
+	.el-dropdown__popper,
+	.el-select__popper,
+	.el-picker__popper,
+	.el-message,
+	.el-alert,
+	.el-tag,
+	.el-pagination button,
+	.el-pagination .el-input__wrapper,
+	.el-form-item,
+	.el-table,
+	.el-table__inner-wrapper,
+	.el-upload-dragger,
+	.el-image,
+	.el-avatar,
+	.el-date-editor,
+	.el-date-editor .el-input__wrapper,
+	.el-date-editor .el-range-input,
+	.el-tabs--card > .el-tabs__header .el-tabs__item,
+	.el-menu-item,
+	.el-sub-menu__title,
+	.search-container,
+	.overview-panel,
+	.feature-item,
+	.stat-icon,
+	.login-card,
+	.login-form .el-form-item,
+	.login-form .el-button
+) {
+	border-radius: var(--app-radius) !important;
+}
+
+.el-table {
+	--el-table-header-bg-color: #f8fafc;
+	--el-table-row-hover-bg-color: #f8fafc;
+}
+
+.el-table th.el-table__cell {
+	font-weight: 600;
+	color: #586474;
+}
+
+.search-container {
+	border-radius: var(--app-radius);
+	box-shadow: none;
 }
 
 .table-container > .el-card__header {
@@ -19,10 +293,44 @@
 
 .link-type,
 .link-type:focus {
-  color: #337ab7;
+	color: #2488ee;
   cursor: pointer;
 
   &:hover {
-    color: rgb(32 160 255);
+		color: #1677d2;
   }
+}
+
+@media (max-width: 768px) {
+	.app-container {
+		padding: 16px;
+	}
+
+	.management-page {
+		padding: 0;
+	}
+
+	.el-dialog {
+		width: calc(100vw - 32px) !important;
+		margin: 16px auto;
+	}
+
+	.el-dialog__header {
+		padding: 18px 18px 10px;
+	}
+
+	.el-dialog__body {
+		max-height: calc(100dvh - 160px);
+		overflow-y: auto;
+		padding: 16px 18px;
+	}
+
+	.el-dialog__footer {
+		padding: 8px 18px 18px;
+	}
+
+	.management-footer {
+		align-items: flex-start;
+		flex-direction: column;
+	}
 }

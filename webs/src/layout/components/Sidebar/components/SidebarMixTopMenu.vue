@@ -19,7 +19,7 @@
             v-if="route.meta && route.meta.icon"
             :icon-class="route.meta.icon"
           />
-          <span v-if="route.path === '/'"> 首页 </span>
+<span v-if="route.path === '/'">{{ $t('navbar.dashboard') }}</span>
           <template v-else>
             <span v-if="route.meta && route.meta.title" class="ml-1">
               {{ translateRouteTitle(route.meta.title) }}

@@ -67,6 +67,11 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
           rewrite: (path) =>
             path.replace(new RegExp("^" + env.VITE_APP_BASE_API), ""),
         },
+        /** Relay Agent 直接请求 /api/agent/v1，开发服务器需转发到 Go 后端。 */
+        "/api": {
+          changeOrigin: true,
+          target: env.VITE_APP_API_URL,
+        },
       },
     },
     plugins: [

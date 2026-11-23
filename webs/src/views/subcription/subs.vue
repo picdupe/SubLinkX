@@ -1,10 +1,11 @@
 <script setup lang='ts'>
-import { ref,onMounted  } from 'vue'
-import {getSubs,AddSub,DelSub,UpdateSub} from "@/api/subcription/subs"
+import { computed, ref, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import {getSubs,AddSub,DelSub,UpdateSub,rotateSubToken} from "@/api/subcription/subs"
 import {getTemp} from "@/api/subcription/temp"
 import {getNodes} from "@/api/subcription/node"
+import { listRelayRoutes, listRelayServers } from "@/api/relay"
 import QrcodeVue from 'qrcode.vue'
-import md5 from 'md5'
 import { VueDraggable } from 'vue-draggable-plus'
 
 interface Sub {
@@ -13,7 +14,24 @@ interface Sub {
   CreateDate: string;
   Config: Config;
   Nodes: Node[];
+  RelayRoutes?: RelayRoute[];
   SubLogs:SubLogs[];
+}
+interface RelayRoute {
+  ID: number;
+  name: string;
+  relay_server_id: number;
+  landing_node_id: number;
+  enabled: boolean;
+  publish_enabled: boolean;
+  listen_address: string;
+  listen_port: number;
+}
+interface RelayServer {
+  ID: number;
+  name: string;
+  public_host: string;
+  enabled: boolean;
 }
 interface Node {
   ID: number;
@@ -24,8 +42,9 @@ interface Node {
 interface Config {
   clash: string;
   surge:string;
-  udp: string;
-  cert: string;
+  udp: boolean;
+  cert: boolean;
+  support_x25519mlkem768: boolean;
 }
 interface SubLogs {
   date: string;
@@ -38,16 +57,52 @@ interface Temp {
   text: string;
   CreateDate: string;
 }
+const { t } = useI18n()
 const tableData = ref<Sub[]>([])
 const Clash = ref('')
 const Surge = ref('')
-const SubTitle = ref('')
+const subMode = ref<'add' | 'edit'>('add')
+const subTitle = computed(() => t(subMode.value === 'add' ? 'subscriptions.addTitle' : 'subscriptions.editTitle'))
 const Subname = ref('')
 const oldSubname = ref('')
 const dialogVisible = ref(false)
 const table = ref()
 const NodesList = ref<Node[]>([])
+const relayRouteList = ref<RelayRoute[]>([])
+const relayServerList = ref<RelayServer[]>([])
 const value1 = ref<string[]>([])
+const selectedRelayRouteIDs = ref<number[]>([])
+const selectedNodeIDs = computed(() => new Set(
+  NodesList.value.filter((item) => value1.value.includes(item.Name)).map((item) => item.ID)
+))
+const canConfigureRealityKem = computed(() => NodesList.value.some((item) => {
+  if (!value1.value.includes(item.Name)) return false
+  try {
+    const uri = new URL(item.Link.trim())
+    return uri.protocol === 'vless:' && uri.searchParams.get('security')?.toLowerCase() === 'reality'
+  } catch {
+    return /^vless:\/\//i.test(item.Link) && /(?:\?|&)security=reality(?:&|#|$)/i.test(item.Link)
+  }
+}))
+const availableRelayRoutes = computed(() => {
+  const enabledServers = new Set(relayServerList.value.filter((item) => item.enabled).map((item) => item.ID))
+  return relayRouteList.value.filter((item) =>
+    item.enabled && item.publish_enabled && enabledServers.has(item.relay_server_id) && selectedNodeIDs.value.has(item.landing_node_id)
+  )
+})
+watch(value1, () => {
+  const eligibleIDs = new Set(availableRelayRoutes.value.map((item) => item.ID))
+  selectedRelayRouteIDs.value = selectedRelayRouteIDs.value.filter((id) => eligibleIDs.has(id))
+}, { deep: true })
+watch(canConfigureRealityKem, (canConfigure) => {
+  if (!canConfigure) {
+    checkList.value = checkList.value.filter((item) => item !== 'support_x25519mlkem768')
+  }
+}, { flush: 'post' })
+function relayRouteLabel(route: RelayRoute) {
+  const server = relayServerList.value.find((item) => item.ID === route.relay_server_id)
+  return `${route.name} — ${server?.name || `#${route.relay_server_id}`} (${server?.public_host || t('subscriptions.unknownEndpoint')}:${route.listen_port})`
+}
 const checkList = ref<string[]>([]) // 配置列表
 const iplogsdialog = ref(false)
 const IplogsList = ref<SubLogs[]>([])
@@ -70,6 +125,11 @@ onMounted(async() => {
     const {data} = await getNodes();
     NodesList.value = data
 })
+onMounted(async () => {
+  const [routesResult, serversResult] = await Promise.all([listRelayRoutes(), listRelayServers()])
+  relayRouteList.value = routesResult.data || []
+  relayServerList.value = serversResult.data || []
+})
 
 
 const addSubs = async ()=>{
@@ -77,26 +137,29 @@ const addSubs = async ()=>{
     "clash": Clash.value.trim(),
     "surge": Surge.value.trim(),
     "udp": checkList.value.includes('udp') ? true :  false,
-    "cert": checkList.value.includes('cert') ? true :  false
+    "cert": checkList.value.includes('cert') ? true :  false,
+    "support_x25519mlkem768": canConfigureRealityKem.value && checkList.value.includes('support_x25519mlkem768')
 
   })
-  if (SubTitle.value === '添加订阅') {
+  if (subMode.value === 'add') {
     await AddSub({
       config: config,
       name: Subname.value.trim(),
-      nodes: value1.value.join(',')
+      nodes: value1.value.join(','),
+      relay_routes: selectedRelayRouteIDs.value.join(',')
     })
     getsubs()
-    ElMessage.success("添加成功");
+    ElMessage.success(t('subscriptions.addSuccess'));
   }else{
     await UpdateSub({
       config: config,
       name: Subname.value.trim(),
       nodes: value1.value.join(','),
+      relay_routes: selectedRelayRouteIDs.value.join(','),
       oldname: oldSubname.value
     })
     getsubs()
-    ElMessage.success("更新成功");
+    ElMessage.success(t('subscriptions.updateSuccess'));
   }
 
     dialogVisible.value = false;
@@ -130,7 +193,7 @@ const toggleSelection = () => {
 }
 
 const handleAddSub = ()=>{
-  SubTitle.value = '添加订阅'
+  subMode.value = 'add'
   Subname.value = ''
   oldSubname.value = ''
   checkList.value = []
@@ -138,6 +201,7 @@ const handleAddSub = ()=>{
   Surge.value = './template/surge.conf'
   dialogVisible.value = true
   value1.value = []
+  selectedRelayRouteIDs.value = []
 }
 
 const handleEdit = (row:any) => {
@@ -151,7 +215,8 @@ const handleEdit = (row:any) => {
         }
       }
       const config = toConfig(tableData.value[i].Config);
-      SubTitle.value = '编辑订阅'
+      checkList.value = []
+      subMode.value = 'edit'
       Subname.value = tableData.value[i].Name
       oldSubname.value = Subname.value
       if (config.udp)  {
@@ -160,20 +225,32 @@ const handleEdit = (row:any) => {
       if (config.cert)  {
         checkList.value.push('cert')
       }
+      if (config.support_x25519mlkem768) {
+        checkList.value.push('support_x25519mlkem768')
+      }
       Clash.value = config.clash
       Surge.value = config.surge
       dialogVisible.value = true
-      value1.value = tableData.value[i].Nodes.map((item) => item.Name)
+      const selectedNames = new Set(tableData.value[i].Nodes.map((item) => item.Name))
+      for (const route of tableData.value[i].RelayRoutes || []) {
+        const landingNode = NodesList.value.find((item) => item.ID === route.landing_node_id)
+        if (landingNode) selectedNames.add(landingNode.Name)
+      }
+      value1.value = [...selectedNames]
+      const eligibleIDs = new Set(availableRelayRoutes.value.map((item) => item.ID))
+      selectedRelayRouteIDs.value = (tableData.value[i].RelayRoutes || [])
+        .map((item) => item.ID)
+        .filter((id) => eligibleIDs.has(id))
     }
   }
 }
 const handleDel = (row:any) => {
   ElMessageBox.confirm(
-    `你是否要删除 ${row.Name} ?`,
-    '提示',
+    t('subscriptions.deletePrompt', { name: row.Name }),
+    t('common.deletePrompt'),
     {
-      confirmButtonText: 'OK',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning',
     }
   ).then(async () => {
@@ -183,7 +260,7 @@ const handleDel = (row:any) => {
       getsubs()
       ElMessage({
         type: 'success',
-        message: '删除成功',
+        message: t('subscriptions.deleteSuccess'),
       })
       
     })
@@ -194,11 +271,11 @@ const selectDel = () => {
       return
   }
   ElMessageBox.confirm(
-    `你是否要删除选中这些 ?`,
-    '提示',
+    t('subscriptions.deleteSelectedPrompt'),
+    t('common.deletePrompt'),
     {
-      confirmButtonText: 'OK',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning',
     }
   ).then( () => {
@@ -210,7 +287,7 @@ const selectDel = () => {
       }
       ElMessage({
         type: 'success',
-        message: '删除成功',
+        message: t('subscriptions.deleteSuccess'),
       })
       
       
@@ -235,6 +312,11 @@ const currentTableData = computed(() => {
   return tableData.value.slice(start, end);
 });
 
+const formatDateTime = (value: string) => {
+  const match = value?.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})/);
+  return match ? `${match[1]} ${match[2]}` : value;
+};
+
 // 复制链接
 const copyUrl = (url: string) => {
   const textarea = document.createElement('textarea');
@@ -244,7 +326,7 @@ const copyUrl = (url: string) => {
   try {
     const successful = document.execCommand('copy');
     const msg = successful ? 'success' : 'warning';
-    const message = successful ? '复制成功！' : '复制失败！';
+    const message = successful ? t('subscriptions.copySuccess') : t('subscriptions.copyFailed');
     ElMessage({
       type: msg,
       message,
@@ -252,7 +334,7 @@ const copyUrl = (url: string) => {
   } catch (err) {
     ElMessage({
       type: 'warning',
-      message: '复制失败！',
+      message: t('subscriptions.copyFailed'),
     });
   } finally {
     document.body.removeChild(textarea);
@@ -269,13 +351,27 @@ const ClientDiaLog = ref(false)
 const ClientList = ['v2ray','clash','surge'] // 客户端列表
 const ClientUrls = ref<Record<string, string>>({})
 const ClientUrl = ref('')
-const handleClient = (name:string) => {
-  let serverAddress = location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '');
+const handleClient = async (row: Sub) => {
+  try {
+    await ElMessageBox.confirm(
+      t('subscriptions.rotateTokenPrompt'),
+      t('common.confirm'),
+      { confirmButtonText: t('common.confirm'), cancelButtonText: t('common.cancel'), type: 'warning' }
+    )
+    const { data } = await rotateSubToken(row.ID)
+    const token = data.token as string
+    if (!token) throw new Error('Missing subscription token')
+  const serverAddress = import.meta.env.DEV && import.meta.env.VITE_APP_API_URL
+    ? import.meta.env.VITE_APP_API_URL.replace(/\/+$/, '')
+    : window.location.origin;
   ClientDiaLog.value = true
-  ClientUrl.value = `${serverAddress}/c/?token=${md5(name)}`
+  ClientUrl.value = `${serverAddress}/c/?token=${encodeURIComponent(token)}`
   ClientList.forEach((item:string) => {
-    ClientUrls.value[item]=`${serverAddress}/c/?token=${md5(name)}`
+    ClientUrls.value[item]=`${serverAddress}/c/?token=${encodeURIComponent(token)}`
   })
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') throw error
+  }
 }
 
 const Qrdialog = ref(false)
@@ -303,85 +399,110 @@ const toggleSelect = (name: string) => {
 </script>
 
 <template>
-  <div>
-    <el-dialog v-model="Qrdialog" width="300px" style="text-align: center" :title="QrTitle">
-      <qrcode-vue :value="qrcode"  :size="200" level="H" />
+  <div class="management-page">
+    <el-dialog
+      v-model="Qrdialog"
+      width="300px"
+      style="text-align: center"
+      :title="QrTitle"
+      :show-close="false"
+      :close-on-click-modal="true"
+    >
+      <div
+        class="subscription-qrcode"
+      >
+        <qrcode-vue
+          class="subscription-qrcode-image"
+          :value="qrcode"
+          :size="200"
+          level="H"
+          role="button"
+          tabindex="0"
+          :aria-label="t('subscriptions.qrCopyHint')"
+          :title="t('subscriptions.qrCopyHint')"
+          @click.stop="copyUrl(qrcode)"
+          @keydown.enter.prevent="copyUrl(qrcode)"
+          @keydown.space.prevent="copyUrl(qrcode)"
+        />
+      </div>
       <el-input
-      v-model="qrcode"
+        :model-value="qrcode"
+        readonly
       >
       </el-input>
-      <el-button @click="copyUrl(qrcode)">复制</el-button>
-      <el-button @click="OpenUrl(qrcode)">打开</el-button>
+      <el-button @click="copyUrl(qrcode)">{{ t('common.copy') }}</el-button>
+      <el-button @click="OpenUrl(qrcode)">{{ t('common.open') }}</el-button>
     </el-dialog>
 
-    <el-dialog v-model="ClientDiaLog" title="客户端(点击二维码获取地址)" style="text-align: center" width="80%">
+    <el-dialog v-model="ClientDiaLog" :title="t('subscriptions.clientTitle')" style="text-align: center" width="min(560px, 94vw)">
       <el-row>
         <el-col>
-        <el-tag type="success" size="large">自动识别</el-tag>
-        <el-button @click="handleQrcode(ClientUrl,'自动识别客户端')">二维码</el-button>
+        <el-tag type="success" size="large">{{ t('subscriptions.autoDetect') }}</el-tag>
+        <el-button @click="handleQrcode(ClientUrl,t('subscriptions.autoDetect'))">{{ t('subscriptions.qrCode') }}</el-button>
       </el-col>
         <el-col v-for="(item,index) in ClientUrls" style="margin-bottom:10px;">
           <el-tag type="success" size="large">{{index}}</el-tag>
-          <el-button @click="handleQrcode(`${item}&client=${index}`,index)">二维码</el-button>
+          <el-button @click="handleQrcode(`${item}&client=${index}`,index)">{{ t('subscriptions.qrCode') }}</el-button>
         </el-col>
         </el-row>
     </el-dialog>
     
-    <el-dialog v-model="iplogsdialog" title="访问记录" width="80%" draggable>
+    <el-dialog v-model="iplogsdialog" :title="t('subscriptions.accessLog')" width="min(1000px, 94vw)" draggable>
   <template #footer>
     <div class="dialog-footer">
       <el-table :data="IplogsList" border style="width: 100%">
         <el-table-column prop="IP" label="Ip" />
-        <el-table-column prop="Count" label="总访问次数" />
-        <el-table-column prop="Addr" label="来源" />
-        <el-table-column prop="Date" label="最近时间" />
+        <el-table-column prop="Count" :label="t('subscriptions.totalVisits')" />
+        <el-table-column prop="Addr" :label="t('subscriptions.source')" />
+        <el-table-column prop="Date" :label="t('subscriptions.recentTime')" />
       </el-table>
     </div>
   </template>
 </el-dialog>
     <el-dialog
     v-model="dialogVisible"
-    :title="SubTitle"
-    width="80%"
+    :title="subTitle"
+    width="min(820px, 94vw)"
   >
-  <el-input v-model="Subname" placeholder="请输入订阅名称" />
+  <el-input v-model="Subname" :placeholder="t('subscriptions.namePlaceholder')" />
   
   <el-row >
-  <el-tag type="primary">clash模版选择</el-tag>
+  <el-tag type="primary">{{ t('subscriptions.templateSelect', { client: 'Clash' }) }}</el-tag>
   <el-radio-group v-model="clientradio" class="ml-4">
-      <el-radio value="1">本地</el-radio>
-      <el-radio value="2">url链接</el-radio>
+      <el-radio value="1">{{ t('subscriptions.local') }}</el-radio>
+      <el-radio value="2">{{ t('subscriptions.url') }}</el-radio>
     </el-radio-group>
-  <el-select v-model="Clash" placeholder="clash模版文件"  v-if="clientradio === '1'">
+  <el-select v-model="Clash" :placeholder="t('subscriptions.templateFile')"  v-if="clientradio === '1'">
     <el-option v-for="template in templist" :key="template.file" :label="template.file" :value="'./template/'+template.file" />
   </el-select>
-  <el-input v-model="Clash" placeholder="clash模版文件"  v-else />
+  <el-input v-model="Clash" :placeholder="t('subscriptions.templateFile')"  v-else />
 </el-row>
 <el-row >
-  <el-tag type="primary">surge模版选择</el-tag>
+  <el-tag type="primary">{{ t('subscriptions.templateSelect', { client: 'Surge' }) }}</el-tag>
   <el-radio-group v-model="clientradio" class="ml-4">
-      <el-radio value="1">本地</el-radio>
-      <el-radio value="2">url链接</el-radio>
+      <el-radio value="1">{{ t('subscriptions.local') }}</el-radio>
+      <el-radio value="2">{{ t('subscriptions.url') }}</el-radio>
     </el-radio-group>
-  <el-select v-model="Surge" placeholder="surge模版文件"  v-if="clientradio === '1'">
+  <el-select v-model="Surge" :placeholder="t('subscriptions.templateFile')"  v-if="clientradio === '1'">
     <el-option v-for="template in templist" :key="template.file" :label="template.file" :value="'./template/'+template.file" />
   </el-select>
-  <el-input v-model="Surge" placeholder="surge模版文件"  v-else />
+  <el-input v-model="Surge" :placeholder="t('subscriptions.templateFile')"  v-else />
 </el-row>
 
-  <el-row>
-    <el-tag type="primary">强制开启选项</el-tag>
-  <el-checkbox-group v-model="checkList"  style="margin: 5px;">
+  <el-row class="force-options-row">
+    <el-tag type="primary">{{ t('subscriptions.forceOptions') }}</el-tag>
+  <el-checkbox-group v-model="checkList" class="force-options-group">
     <el-checkbox :value="'udp'">udp</el-checkbox>
-    <el-checkbox :value="'cert'">跳过证书</el-checkbox>
+    <el-checkbox :value="'cert'">{{ t('subscriptions.skipCertificate') }}</el-checkbox>
+    <el-checkbox v-if="canConfigureRealityKem" :value="'support_x25519mlkem768'">{{ t('subscriptions.realityKem') }}</el-checkbox>
   </el-checkbox-group>
 </el-row>
   <div class="m-4">
-    <p>选择已有的节点列表</p>
+    <p>{{ t('subscriptions.chooseNodes') }}</p>
     <el-select
       v-model="value1"
       multiple
-      placeholder="Select"
+      :placeholder="t('subscriptions.chooseNodePlaceholder')"
       style="width: 100%"
     >
       <el-option
@@ -390,32 +511,47 @@ const toggleSelect = (name: string) => {
         :label="item.Name"
         :value="item.Name"
       />
-        <div style="margin-top: 20px">
-
-  </div>
     </el-select>
-    <p>已选节点（可拖拽排序）</p>
+    <p>{{ t('subscriptions.selectedNodes') }}</p>
     <VueDraggable v-model="value1" :animation="150" ghost-class="ghost">
       <div v-for="(nodeName, index) in value1" :key="nodeName" class="draggable-item">
         <span class="row-number">{{ index + 1 }}.</span> {{ nodeName }}
       </div>
     </VueDraggable>
 
+    <p>{{ t('subscriptions.chooseRelayRoutes') }}</p>
+    <el-select
+      v-model="selectedRelayRouteIDs"
+      multiple
+      clearable
+      :placeholder="t('subscriptions.relayPlaceholder')"
+      style="width: 100%"
+    >
+      <el-option
+        v-for="route in availableRelayRoutes"
+        :key="route.ID"
+        :label="relayRouteLabel(route)"
+        :value="route.ID"
+      />
+    </el-select>
+
 
   </div>
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="dialogVisible = false">关闭</el-button>
-        <el-button type="primary" @click="addSubs">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.close') }}</el-button>
+        <el-button type="primary" @click="addSubs">{{ t('common.confirm') }}</el-button>
       </div>
     </template>
   </el-dialog>
-    <el-card>
-    <el-button type="primary" @click="handleAddSub">添加订阅</el-button>
-    <div style="margin-bottom: 10px"></div>
+    <el-card class="management-card" shadow="never">
+    <div class="management-toolbar">
+      <el-button type="primary" @click="handleAddSub">{{ t('subscriptions.addTitle') }}</el-button>
+    </div>
 
-      <el-table ref="table" 
+      <el-table ref="table"
       :data="currentTableData" 
+      :fit="true"
       style="width: 100%" 
       stripe
       @selection-change="handleSelectionChange" 
@@ -423,39 +559,44 @@ const toggleSelect = (name: string) => {
       :tree-props="{children: 'Nodes'}"
       >
     <el-table-column type="selection" fixed prop="ID" label="id"  />
-    <el-table-column prop="Name" label="订阅名称 / 节点"  >
+    <el-table-column prop="Name" :label="t('subscriptions.nameNode')"  >
     <template #default="{row}">
       <el-tag :type="!row.Nodes ? 'success' : 'primary'" >{{row.Name}}</el-tag>
         </template>
     </el-table-column>
-    <el-table-column prop="Link" label="链接" :show-overflow-tooltip="true" >
+    <el-table-column prop="Link" :label="t('subscriptions.link')" :show-overflow-tooltip="true" >
       <template #default="{row}">
         <div v-if="row.Nodes">
-          <el-link type="primary" size="small" @click="handleClient(row.Name)">客户端</el-link>
+          <el-link type="primary" size="small" @click="handleClient(row)">{{ t('subscriptions.client') }}</el-link>
         </div>
         </template>
       </el-table-column>
  
-    <el-table-column prop="CreatedAt" label="创建时间" sortable  />
-    <el-table-column  label="操作" width="120">
+    <el-table-column prop="CreatedAt" :label="t('subscriptions.createdAt')" sortable>
+      <template #default="{ row }">{{ formatDateTime(row.CreatedAt) }}</template>
+    </el-table-column>
+    <el-table-column :label="t('subscriptions.actions')" fixed="right" width="120">
       <template #default="scope">
         <div v-if="scope.row.Nodes">
-          <el-button link type="primary" size="small" @click="handleIplogs(scope.row)">记录</el-button>
-          <el-button link type="primary" size="small" @click="handleEdit(scope.row)">编辑</el-button>
-  <el-button link type="primary" size="small" @click="handleDel(scope.row)">删除</el-button>
+          <div class="subscription-row-actions">
+            <el-button link type="primary" size="small" @click="handleIplogs(scope.row)">{{ t('subscriptions.logs') }}</el-button>
+            <el-button link type="primary" size="small" @click="handleEdit(scope.row)">{{ t('common.edit') }}</el-button>
+            <el-button link type="primary" size="small" @click="handleDel(scope.row)">{{ t('common.delete') }}</el-button>
+          </div>
         </div>
         <div v-else>
-          <el-button link type="primary" size="small" @click="copyInfo(scope.row)">复制</el-button>
+          <el-button link type="primary" size="small" @click="copyInfo(scope.row)">{{ t('common.copy') }}</el-button>
         </div>
 
       </template>
     </el-table-column>
   </el-table>
-  <div style="margin-top: 20px" />
-    <el-button type="info" @click="selectAll()">全选</el-button>
-    <el-button type="warning" @click="toggleSelection()">取消选择</el-button>
-    <el-button type="danger" @click="selectDel">批量删除</el-button>
-  <div style="margin-top: 20px"/>
+  <div class="management-actions">
+    <el-button type="info" @click="selectAll()">{{ t('common.selectAll') }}</el-button>
+    <el-button type="warning" @click="toggleSelection()">{{ t('common.clearSelection') }}</el-button>
+    <el-button type="danger" @click="selectDel">{{ t('common.deleteSelected') }}</el-button>
+  </div>
+  <div class="management-footer">
   <el-pagination
   @size-change="handleSizeChange"
   @current-change="handleCurrentChange"
@@ -465,15 +606,35 @@ const toggleSelect = (name: string) => {
   :page-sizes="[10, 20, 30, 40]"
   :total="tableData.length">
 </el-pagination>
+  </div>
 
     </el-card>
   </div>
 </template>
 
 <style scoped>
-.el-card{
-  margin: 10px;
+.subscription-qrcode {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
 }
+
+.subscription-qrcode :deep(.subscription-qrcode-image) {
+  cursor: pointer;
+}
+
+.force-options-row {
+  align-items: center;
+  gap: 8px;
+}
+
+.force-options-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+}
+
 .el-input{
   margin-bottom: 10px;
 }
@@ -486,7 +647,7 @@ const toggleSelect = (name: string) => {
   margin-bottom: 5px;
   background-color: #f0f2f5;
   border: 1px solid #dcdfe6;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   display: flex;
   align-items: center;
   cursor: grab;
@@ -504,5 +665,17 @@ const toggleSelect = (name: string) => {
 .row-number {
   margin-right: 10px;
   font-weight: bold;
+}
+
+.subscription-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.subscription-row-actions :deep(.el-button + .el-button) {
+  margin-left: 6px;
 }
 </style>
