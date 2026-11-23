@@ -69,17 +69,41 @@ Then just type in the install script
 
 ### docker method:
 
-Create a directory where you want it to be located, such as mkdir sublinkx.
+From the project directory, copy the environment template and configure the allowed panel origins:
 
-Then cd into the directory and enter the following command to mount the data.
-
-All you need to back up is the db and templates.
 ```
-docker run --name sublinkx -p 8000:8000 \
--v $PWD/db:/app/db \
--v $PWD/template:/app/template \
--v $PWD/logs:/app/logs \
--d jaaksi/sublinkx
+cp .env.example .env
+```
+
+Then build and start the app with Docker Compose:
+
+```
+docker compose up -d --build
+```
+
+Compose persists the `db`, `template`, and `logs` directories. Check the service with `docker compose ps` and follow its logs with `docker compose logs -f sublink`.
+
+Set `CORS_ALLOWED_ORIGINS` to the exact origins allowed to make browser cross-origin requests. Separate multiple origins with commas:
+
+```env
+CORS_ALLOWED_ORIGINS=https://panel.example.com,http://192.168.1.50:8081
+```
+
+Include the scheme and non-default port. List each domain or IP separately; wildcards are not supported. Every request with an `Origin` header, including requests from the panel, must match the list. This is a browser CORS policy: it does not restrict clients that omit `Origin` and does not replace firewall or reverse-proxy source-IP rules. Configure network source restrictions at the firewall or reverse proxy. Apply changes with `docker compose up -d`.
+
+To run a published image directly on Linux, prepare `.env` and make the persistent directories writable by the container's default UID/GID `10001:10001` first:
+
+```sh
+mkdir -p db template logs
+sudo chown -R 10001:10001 db template logs
+```
+
+Then run:
+
+```
+docker run --name sublinkx -p 8000:8000 --env-file .env \
+  -v $PWD/db:/app/db -v $PWD/template:/app/template -v $PWD/logs:/app/logs \
+  -d jaaksi/sublinkx
 ```
 
 To support the development of my project, I plan to apply for a free VPS offered by ZMTO. My project currently involves Docker image support for multiple My project currently involves Docker image support for multiple architectures (arm64 and amd64), as well as automation for building and pushing. Therefore, I am requesting a 4-core, 8GB RAM Ubuntu VPS with root access.

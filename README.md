@@ -71,17 +71,42 @@ curl -s -H "Cache-Control: no-cache" -H "Pragma: no-cache" https://raw.githubuse
 
 ### docker方式：
 
-在自己需要的位置创建一个目录比如mkdir sublinkx
+在项目目录中复制环境变量模板并配置允许访问面板的来源：
 
-然后cd进入这个目录，输入下面指令之后数据就挂载过来
-
-需要备份的就是db和template
 ```
-docker run --name sublinkx -p 8000:8000 \
--v $PWD/db:/app/db \
--v $PWD/template:/app/template \
--v $PWD/logs:/app/logs \
--d jaaksi/sublinkx
+cp .env.example .env
+```
+
+Docker 容器默认以 UID/GID `10001` 运行。首次启动前先准备持久化目录并设置属主；宿主机使用其他 UID/GID 时，也要在 `.env` 中修改 `SUBLINK_UID` 和 `SUBLINK_GID`，并使用对应值设置目录属主：
+
+```sh
+mkdir -p db logs template
+sudo chown -R 10001:10001 db logs template
+```
+
+编辑 `.env` 后，用 Compose 构建并启动：
+
+```
+docker compose up -d --build
+```
+
+Compose 会持久化 `db`、`template` 和 `logs` 目录。使用 `docker compose ps` 查看运行状态，使用 `docker compose logs -f sublink` 查看日志。
+
+跨域来源和客户端来源 IP 通过项目根目录的 `.env` 配置。先复制 `.env.example` 为 `.env`，再分别配置 `CORS_ALLOWED_ORIGINS` 和 `ALLOWED_CLIENT_IPS`，多个值用逗号分隔，例如：
+
+```env
+CORS_ALLOWED_ORIGINS=https://panel.example.com,http://192.168.1.50:8081
+ALLOWED_CLIENT_IPS=192.168.1.0/24,203.0.113.25
+```
+
+`CORS_ALLOWED_ORIGINS` 需包含协议和端口（HTTP 默认端口 80、HTTPS 默认端口 443 可省略），按浏览器来源域名/IP 精确匹配，不支持通配符。它仅是浏览器跨域策略，不是网络访问控制。`ALLOWED_CLIENT_IPS` 限制所有 HTTP 客户端的实际来源 IP，支持单个 IPv4/IPv6 地址及 CIDR；留空时仅允许本机回环访问。经反向代理访问时，请设置 `TRUSTED_PROXIES`，再将客户端来源地址加入白名单；否则服务端看到的地址是代理 IP。域名不能可靠地标识客户端来源，域名解析目标应通过 IP/CIDR 白名单或主机防火墙控制。修改后执行 `docker compose up -d` 使配置生效。
+
+直接运行已发布镜像时，先准备 `.env` 和持久化目录，再执行：
+
+```
+docker run --name sublinkx --user 10001:10001 -p 8000:8000 --env-file .env \
+  -v $PWD/db:/app/db -v $PWD/template:/app/template -v $PWD/logs:/app/logs \
+  -d jaaksi/sublinkx
 ```
 
 To support the development of my project, I plan to apply for a free VPS offered by ZMTO. My project currently involves Docker image support for multiple architectures (arm64 and amd64), as well as automation for building and pushing. Therefore, I am requesting a 4-core, 8GB RAM Ubuntu VPS with root access.

@@ -9,13 +9,17 @@ RUN go build -o sublinkX
 FROM alpine:latest
 WORKDIR /app
 
-# 设置时区为 Asia/Shanghai
 ENV TZ=Asia/Shanghai
 
-# 部分环境需要手动创建目录
-RUN mkdir -p /app/db /app/logs /app/template && chmod 777 /app/db /app/logs /app/template
+RUN apk add --no-cache ca-certificates tzdata \
+    && addgroup -S -g 10001 sublink \
+    && adduser -S -D -H -u 10001 -G sublink sublink \
+    && mkdir -p /app/db /app/logs /app/template \
+    && chown -R sublink:sublink /app/db /app/logs /app/template \
+    && chmod 750 /app/db /app/logs /app/template
 
-COPY --from=builder /app/sublinkX /app/sublinkX
+COPY --from=builder --chown=sublink:sublink /app/sublinkX /app/sublinkX
+USER sublink:sublink
 EXPOSE 8000
 CMD ["/app/sublinkX"]
 
