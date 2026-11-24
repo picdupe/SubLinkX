@@ -1,7 +1,6 @@
-version: '3.8'  # 使用 Docker Compose 文件的版本
-
 services:
   sublink:
+    container_name: SubLinkX
     user: "${SUBLINK_UID:-10001}:${SUBLINK_GID:-10001}"
     build:
       context: .  # 指定 Dockerfile 的上下文（当前目录）
