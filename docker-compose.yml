@@ -1,6 +1,7 @@
 services:
   sublink:
     container_name: SubLinkX
+    image: sublinkx:latest
     user: "${SUBLINK_UID:-10001}:${SUBLINK_GID:-10001}"
     build:
       context: .  # 指定 Dockerfile 的上下文（当前目录）
