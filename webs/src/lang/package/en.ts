@@ -109,7 +109,6 @@ export default {
     addSuccess: "Subscription added", updateSuccess: "Subscription updated", deleteSuccess: "Subscription deleted", deletePrompt: "Delete subscription {name}?",
     deleteSelectedPrompt: "Delete the selected subscriptions?", copySuccess: "Copied", copyFailed: "Copy failed",
     qrCopyHint: "Click the QR code to copy the link", clientTitle: "Clients (click a QR code to get its address)", autoDetect: "Auto detect", qrCode: "QR code",
-    rotateTokenPrompt: "Generating a new subscription link will immediately invalidate the previous link. Continue?",
     accessLog: "Access log", totalVisits: "Total visits", source: "Source", recentTime: "Recent time", templateSelect: "Select {client} template",
     local: "Local", url: "URL", templateFile: "{client} template file", forceOptions: "Force options", skipCertificate: "Skip certificate verification",
     realityKem: "VLESS Reality: enable X25519MLKEM768", chooseNodes: "Select existing nodes", chooseNodePlaceholder: "Select nodes",

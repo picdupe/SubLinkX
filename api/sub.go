@@ -13,6 +13,7 @@ import (
 	"sublink/utils"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func SubTotal(c *gin.Context) {
@@ -108,6 +109,11 @@ func SubAdd(c *gin.Context) {
 	}
 	initialToken = strings.ToLower(initialToken)
 	sub.AccessTokenHash = hashSubscriptionToken(initialToken)
+	sub.AccessTokenCiphertext, err = encryptSubscriptionToken(initialToken)
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "生成订阅令牌失败"})
+		return
+	}
 	err = sub.Add()
 	if err != nil {
 		c.JSON(400, gin.H{
@@ -134,7 +140,15 @@ func SubRotateToken(c *gin.Context) {
 		return
 	}
 	token = strings.ToLower(token)
-	result := models.DB.Model(&models.Subcription{}).Where("id = ?", id).Update("access_token_hash", hashSubscriptionToken(token))
+	ciphertext, err := encryptSubscriptionToken(token)
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "更新订阅令牌失败"})
+		return
+	}
+	result := models.DB.Model(&models.Subcription{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"access_token_hash":       hashSubscriptionToken(token),
+		"access_token_ciphertext": ciphertext,
+	})
 	if result.Error != nil {
 		c.JSON(500, gin.H{"msg": "更新订阅令牌失败"})
 		return
@@ -144,6 +158,64 @@ func SubRotateToken(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"code": "00000", "data": gin.H{"token": token}, "msg": "订阅令牌已更新"})
+}
+
+func SubGetToken(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		c.JSON(400, gin.H{"msg": "无效的订阅 ID"})
+		return
+	}
+
+	var token string
+	err = models.DB.Transaction(func(tx *gorm.DB) error {
+		var sub models.Subcription
+		if err := tx.First(&sub, id).Error; err != nil {
+			return err
+		}
+		if sub.AccessTokenCiphertext != "" {
+			token, err = decryptSubscriptionToken(sub.AccessTokenCiphertext)
+			return err
+		}
+
+		generatedToken, err := utils.RandString(subscriptionTokenLength)
+		if err != nil {
+			return err
+		}
+		generatedToken = strings.ToLower(generatedToken)
+		ciphertext, err := encryptSubscriptionToken(generatedToken)
+		if err != nil {
+			return err
+		}
+		result := tx.Model(&models.Subcription{}).
+			Where("id = ? AND access_token_ciphertext = ?", id, "").
+			Updates(map[string]interface{}{
+				"access_token_hash":       hashSubscriptionToken(generatedToken),
+				"access_token_ciphertext": ciphertext,
+			})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 1 {
+			token = generatedToken
+			return nil
+		}
+
+		if err := tx.First(&sub, id).Error; err != nil {
+			return err
+		}
+		token, err = decryptSubscriptionToken(sub.AccessTokenCiphertext)
+		return err
+	})
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		c.JSON(404, gin.H{"msg": "订阅不存在"})
+		return
+	}
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "读取订阅令牌失败"})
+		return
+	}
+	c.JSON(200, gin.H{"code": "00000", "data": gin.H{"token": token}, "msg": "订阅令牌已读取"})
 }
 
 // 更新订阅

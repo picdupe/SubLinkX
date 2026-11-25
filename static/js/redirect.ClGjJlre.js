@@ -1,0 +1,1 @@
+import{d as a,Y as e,ai as s,ak as r,o as t}from"./index.D243PJp7.js";const p=a({__name:"index",setup(a){const p=s(),n=r(),{params:o,query:d}=p,{path:i}=o;return n.replace({path:"/"+i,query:d}),(a,s)=>(t(),e("div"))}});export{p as default};

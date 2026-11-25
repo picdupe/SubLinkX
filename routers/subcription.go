@@ -15,6 +15,7 @@ func Subcription(r *gin.Engine) {
 		SubcriptionGroup.DELETE("/delete", api.SubDel)
 		SubcriptionGroup.GET("/get", api.SubGet)
 		SubcriptionGroup.POST("/update", api.SubUpdate)
+		SubcriptionGroup.GET("/:id/token", api.SubGetToken)
 		SubcriptionGroup.POST("/:id/token", api.SubRotateToken)
 	}
 

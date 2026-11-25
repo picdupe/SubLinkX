@@ -1,7 +1,7 @@
 <script setup lang='ts'>
 import { computed, ref, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {getSubs,AddSub,DelSub,UpdateSub,rotateSubToken} from "@/api/subcription/subs"
+import {getSubs,AddSub,DelSub,UpdateSub,getSubToken} from "@/api/subcription/subs"
 import {getTemp} from "@/api/subcription/temp"
 import {getNodes} from "@/api/subcription/node"
 import { listRelayRoutes, listRelayServers } from "@/api/relay"
@@ -354,12 +354,7 @@ const ClientUrl = ref('')
 const handleClient = async (row: unknown) => {
   if (!row || typeof row !== 'object' || !('ID' in row) || typeof row.ID !== 'number') return
   try {
-    await ElMessageBox.confirm(
-      t('subscriptions.rotateTokenPrompt'),
-      t('common.confirm'),
-      { confirmButtonText: t('common.confirm'), cancelButtonText: t('common.cancel'), type: 'warning' }
-    )
-    const { data } = await rotateSubToken(row.ID)
+    const { data } = await getSubToken(row.ID)
     const token = data.token as string
     if (!token) throw new Error('Missing subscription token')
   const serverAddress = import.meta.env.DEV && import.meta.env.VITE_APP_API_URL

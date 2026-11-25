@@ -10,14 +10,15 @@ import (
 // Subcription 结构体
 type Subcription struct {
 	gorm.Model
-	ID              int
-	Name            string
-	AccessTokenHash string       `gorm:"size:64;not null;default:''" json:"-"`
-	Config          string       `gorm:"type:text"` // Config 存储为 JSON 字符串
-	NodeOrder       string       `gorm:"type:text"`
-	Nodes           []Node       `gorm:"many2many:subcription_nodes;"`
-	RelayRoutes     []RelayRoute `gorm:"many2many:subcription_relay_routes;" json:"RelayRoutes,omitempty"`
-	SubLogs         []SubLogs    `gorm:"foreignKey:SubcriptionID;"`
+	ID                    int
+	Name                  string
+	AccessTokenHash       string       `gorm:"size:64;not null;default:''" json:"-"`
+	AccessTokenCiphertext string       `gorm:"type:text" json:"-"`
+	Config                string       `gorm:"type:text"` // Config 存储为 JSON 字符串
+	NodeOrder             string       `gorm:"type:text"`
+	Nodes                 []Node       `gorm:"many2many:subcription_nodes;"`
+	RelayRoutes           []RelayRoute `gorm:"many2many:subcription_relay_routes;" json:"RelayRoutes,omitempty"`
+	SubLogs               []SubLogs    `gorm:"foreignKey:SubcriptionID;"`
 }
 
 // Config 结构体，用于解析 Subcription.Config 字段的 JSON 内容

@@ -1,1 +1,0 @@
-import{aO as a}from"./index.CGnfqUcy.js";const e="update:modelValue",i="change",n="input",o=e=>a?window.requestAnimationFrame(e):setTimeout(e,16),t=e=>a?window.cancelAnimationFrame(e):clearTimeout(e);export{i as C,n as I,e as U,t as c,o as r};

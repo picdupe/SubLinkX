@@ -109,7 +109,6 @@ export default {
     addSuccess: "添加成功", updateSuccess: "更新成功", deleteSuccess: "删除成功", deletePrompt: "你是否要删除 {name}？",
     deleteSelectedPrompt: "你是否要删除选中的订阅？", copySuccess: "复制成功！", copyFailed: "复制失败！",
     qrCopyHint: "点击二维码复制链接", clientTitle: "客户端（点击二维码获取地址）", autoDetect: "自动识别", qrCode: "二维码",
-    rotateTokenPrompt: "生成新订阅链接会立即使之前的链接失效，是否继续？",
     accessLog: "访问记录", totalVisits: "总访问次数", source: "来源", recentTime: "最近时间", templateSelect: "{client} 模板选择",
     local: "本地", url: "URL 链接", templateFile: "{client} 模板文件", forceOptions: "强制开启选项", skipCertificate: "跳过证书",
     realityKem: "VLESS Reality：启用 X25519MLKEM768", chooseNodes: "选择已有的节点列表", chooseNodePlaceholder: "请选择已有节点",
