@@ -176,7 +176,30 @@ func writeClash(c *gin.Context, sub models.Subcription) {
 		c.String(http.StatusInternalServerError, "配置读取错误")
 		return
 	}
-	output, err := node.EncodeClash(urls, configs)
+	names := make([]string, len(urls))
+	if len(sub.RelayRoutes) > 0 {
+		for i, route := range sub.RelayRoutes {
+			if i < len(names) && route.Enabled && route.PublishEnabled {
+				names[i] = route.Name
+			}
+		}
+	} else {
+		linkIndex := 0
+		for _, n := range sub.Nodes {
+			links, linkErr := subscriptionNodeLinks([]models.Node{n})
+			if linkErr != nil {
+				c.String(http.StatusBadGateway, "获取上游订阅失败")
+				return
+			}
+			for range links {
+				if linkIndex < len(names) {
+					names[linkIndex] = n.Name
+				}
+				linkIndex++
+			}
+		}
+	}
+	output, err := node.EncodeClashWithNames(urls, names, configs)
 	if err != nil {
 		c.String(http.StatusBadRequest, "%s", err.Error())
 		return

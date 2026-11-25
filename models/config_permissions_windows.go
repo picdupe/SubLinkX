@@ -20,7 +20,10 @@ func restrictConfigDirectory(path string) error {
 	if err != nil {
 		return err
 	}
-	return runICACLS(path, "/reset", "/inheritance:r", "/grant:r",
+	if err := runICACLS(path, "/reset"); err != nil {
+		return err
+	}
+	return runICACLS(path, "/inheritance:r", "/grant:r",
 		"*"+ownerSID+":(OI)(CI)(F)", windowsLocalSystemSID+":(OI)(CI)(F)", windowsAdministratorsSID+":(OI)(CI)(F)")
 }
 
@@ -29,7 +32,10 @@ func restrictConfigFile(path string) error {
 	if err != nil {
 		return err
 	}
-	return runICACLS(path, "/reset", "/inheritance:r", "/grant:r",
+	if err := runICACLS(path, "/reset"); err != nil {
+		return err
+	}
+	return runICACLS(path, "/inheritance:r", "/grant:r",
 		"*"+ownerSID+":(F)", windowsLocalSystemSID+":(F)", windowsAdministratorsSID+":(F)")
 }
 
