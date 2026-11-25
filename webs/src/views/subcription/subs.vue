@@ -351,7 +351,8 @@ const ClientDiaLog = ref(false)
 const ClientList = ['v2ray','clash','surge'] // 客户端列表
 const ClientUrls = ref<Record<string, string>>({})
 const ClientUrl = ref('')
-const handleClient = async (row: Sub) => {
+const handleClient = async (row: unknown) => {
+  if (!row || typeof row !== 'object' || !('ID' in row) || typeof row.ID !== 'number') return
   try {
     await ElMessageBox.confirm(
       t('subscriptions.rotateTokenPrompt'),

@@ -1,0 +1,1 @@
+import{E as t}from"./el-alert.DnvPloGm.js";import{a8 as e,o,Y as r,a4 as s}from"./index.kiZHDt4V.js";import"./vnode.B8Z5WX7m.js";const a={style:{padding:"30px"}};const l=e({},[["render",function(e,l){const n=t;return o(),r("div",a,[s(n,{closable:!1,title:e.$t("route.level3a"),type:"error"},null,8,["title"])])}]]);export{l as default};
