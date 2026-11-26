@@ -99,7 +99,7 @@ CORS_ALLOWED_ORIGINS=https://panel.example.com,http://192.168.1.50:8081
 ALLOWED_CLIENT_IPS=192.168.1.0/24,203.0.113.25
 ```
 
-`CORS_ALLOWED_ORIGINS` 需包含协议和端口（HTTP 默认端口 80、HTTPS 默认端口 443 可省略），按浏览器来源域名/IP 精确匹配，不支持通配符。它仅是浏览器跨域策略，不是网络访问控制。`ALLOWED_CLIENT_IPS` 限制所有 HTTP 客户端的实际来源 IP，支持单个 IPv4/IPv6 地址及 CIDR；留空时仅允许本机回环访问。经反向代理访问时，请设置 `TRUSTED_PROXIES`，再将客户端来源地址加入白名单；否则服务端看到的地址是代理 IP。域名不能可靠地标识客户端来源，域名解析目标应通过 IP/CIDR 白名单或主机防火墙控制。修改后执行 `docker compose up -d` 使配置生效。
+`CORS_ALLOWED_ORIGINS` 需包含协议和端口（HTTP 默认端口 80、HTTPS 默认端口 443 可省略），按浏览器来源域名/IP 精确匹配，不支持通配符。它仅是浏览器跨域策略，不是网络访问控制。`ALLOWED_CLIENT_IPS` 限制所有 HTTP 客户端的实际来源 IP，支持单个 IPv4/IPv6 地址及 CIDR；留空时仅允许本机回环访问。经反向代理访问时，`TRUSTED_PROXIES` 必须设置为应用看到的反代 IP/CIDR，否则服务端只会记录代理 IP。例如日志显示 `192.168.16.1` 时，将它加入 `TRUSTED_PROXIES`。应用在可信代理请求中识别 `CF-Connecting-IP`、`True-Client-IP`、`X-Forwarded-For` 和 `X-Real-IP`。若 CDN 直接连接应用，将 CDN 官方 IP 段加入 `TRUSTED_PROXIES`；若 CDN 经 Nginx 等反代连接，只需信任应用直接连接的反代，并确保反代传递或覆盖 CDN 提供的客户端 IP 头。不要信任任意来源转发的 IP 头；并将客户端实际来源网段配置到 `ALLOWED_CLIENT_IPS`。修改后重启应用容器使配置生效。
 
 直接运行已发布镜像时，先准备 `.env` 和持久化目录，再执行：
 

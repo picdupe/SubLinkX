@@ -132,6 +132,7 @@ func main() {
 func Run(port int) {
 	// 初始化gin框架
 	r := gin.Default()
+	r.RemoteIPHeaders = []string{"CF-Connecting-IP", "True-Client-IP", "X-Forwarded-For", "X-Real-IP"}
 	trustedProxies := []string{}
 	if configured := strings.TrimSpace(os.Getenv("TRUSTED_PROXIES")); configured != "" {
 		for _, proxy := range strings.Split(configured, ",") {
