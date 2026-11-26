@@ -83,6 +83,11 @@ func fetchSubscription(rawURL string) (string, error) {
 }
 
 func subscriptionLinks(sub models.Subcription) ([]string, error) {
+	links, _, err := subscriptionLinksWithNames(sub)
+	return links, err
+}
+
+func subscriptionLinksWithNames(sub models.Subcription) ([]string, []string, error) {
 	hasRelaySelection := len(sub.RelayRoutes) > 0
 	routes := make([]models.RelayRoute, 0, len(sub.RelayRoutes))
 	serverIDs := make([]uint, 0, len(sub.RelayRoutes))
@@ -96,13 +101,13 @@ func subscriptionLinks(sub models.Subcription) ([]string, error) {
 	}
 	if len(routes) == 0 {
 		if hasRelaySelection {
-			return []string{}, nil
+			return []string{}, []string{}, nil
 		}
-		return subscriptionNodeLinks(sub.Nodes)
+		return subscriptionNodeLinksWithNames(sub.Nodes)
 	}
 	var servers []models.RelayServer
 	if err := models.DB.Where("id IN ? AND enabled = ?", serverIDs, true).Find(&servers).Error; err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	serverByID := make(map[uint]models.RelayServer, len(servers))
 	for _, server := range servers {
@@ -110,13 +115,14 @@ func subscriptionLinks(sub models.Subcription) ([]string, error) {
 	}
 	var landingNodes []models.Node
 	if err := models.DB.Where("id IN ?", nodeIDs).Find(&landingNodes).Error; err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	nodeByID := make(map[int]models.Node, len(landingNodes))
 	for _, landing := range landingNodes {
 		nodeByID[landing.ID] = landing
 	}
 	var relayLinks []string
+	var relayNames []string
 	for _, route := range routes {
 		server, ok := serverByID[route.RelayServerID]
 		if !ok {
@@ -128,31 +134,47 @@ func subscriptionLinks(sub models.Subcription) ([]string, error) {
 		}
 		link, err := services.BuildRelaySubscriptionLink(landing.Link, server.PublicHost, route.ListenPort, route.Name, route.Protocol)
 		if err != nil {
-			return nil, fmt.Errorf("派生中转线路 %q 失败: %w", route.Name, err)
+			return nil, nil, fmt.Errorf("派生中转线路 %q 失败: %w", route.Name, err)
 		}
 		relayLinks = append(relayLinks, link)
+		relayNames = append(relayNames, route.Name)
 	}
-	return relayLinks, nil
+	return relayLinks, relayNames, nil
 }
 
 func subscriptionNodeLinks(nodes []models.Node) ([]string, error) {
+	links, _, err := subscriptionNodeLinksWithNames(nodes)
+	return links, err
+}
+
+func subscriptionNodeLinksWithNames(nodes []models.Node) ([]string, []string, error) {
 	var urls []string
+	var names []string
 	for _, n := range nodes {
 		if strings.Contains(n.Link, ",") {
-			urls = append(urls, strings.Split(n.Link, ",")...)
+			links := strings.Split(n.Link, ",")
+			urls = append(urls, links...)
+			for range links {
+				names = append(names, n.Name)
+			}
 			continue
 		}
 		if strings.HasPrefix(strings.ToLower(n.Link), "http://") || strings.HasPrefix(strings.ToLower(n.Link), "https://") {
 			body, err := fetchSubscription(n.Link)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
-			urls = append(urls, strings.Split(node.Base64Decode(body), "\n")...)
+			links := strings.Split(node.Base64Decode(body), "\n")
+			urls = append(urls, links...)
+			for range links {
+				names = append(names, n.Name)
+			}
 			continue
 		}
 		urls = append(urls, n.Link)
+		names = append(names, n.Name)
 	}
-	return urls, nil
+	return urls, names, nil
 }
 
 func writeV2ray(c *gin.Context, sub models.Subcription) {
@@ -166,7 +188,7 @@ func writeV2ray(c *gin.Context, sub models.Subcription) {
 }
 
 func writeClash(c *gin.Context, sub models.Subcription) {
-	urls, err := subscriptionLinks(sub)
+	urls, names, err := subscriptionLinksWithNames(sub)
 	if err != nil {
 		c.String(http.StatusBadGateway, "获取上游订阅失败")
 		return
@@ -175,29 +197,6 @@ func writeClash(c *gin.Context, sub models.Subcription) {
 	if err := json.Unmarshal([]byte(sub.Config), &configs); err != nil {
 		c.String(http.StatusInternalServerError, "配置读取错误")
 		return
-	}
-	names := make([]string, len(urls))
-	if len(sub.RelayRoutes) > 0 {
-		for i, route := range sub.RelayRoutes {
-			if i < len(names) && route.Enabled && route.PublishEnabled {
-				names[i] = route.Name
-			}
-		}
-	} else {
-		linkIndex := 0
-		for _, n := range sub.Nodes {
-			links, linkErr := subscriptionNodeLinks([]models.Node{n})
-			if linkErr != nil {
-				c.String(http.StatusBadGateway, "获取上游订阅失败")
-				return
-			}
-			for range links {
-				if linkIndex < len(names) {
-					names[linkIndex] = n.Name
-				}
-				linkIndex++
-			}
-		}
 	}
 	output, err := node.EncodeClashWithNames(urls, names, configs)
 	if err != nil {

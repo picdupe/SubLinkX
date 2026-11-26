@@ -11,7 +11,7 @@ import (
 func EncodeSurge(urls []string, sqlconfig SqlConfig) (string, error) {
 	var proxys, groups []string
 	for _, link := range urls {
-		Scheme := strings.Split(link, "://")[0]
+		Scheme := strings.ToLower(strings.SplitN(link, "://", 2)[0])
 		switch {
 		case Scheme == "ss":
 			ss, err := DecodeSSURL(link)

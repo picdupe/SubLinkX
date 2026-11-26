@@ -94,7 +94,7 @@ func EncodeClashWithNames(urls, names []string, sqlconfig SqlConfig) ([]byte, er
 
 	for i, link := range urls {
 		proxyCount := len(proxys)
-		Scheme := strings.Split(link, "://")[0]
+		Scheme := strings.ToLower(strings.SplitN(link, "://", 2)[0])
 		switch {
 		case Scheme == "ss":
 			ss, err := DecodeSSURL(link)
@@ -121,6 +121,7 @@ func EncodeClashWithNames(urls, names []string, sqlconfig SqlConfig) ([]byte, er
 			ssr, err := DecodeSSRURL(link)
 			if err != nil {
 				log.Println(err)
+				continue
 			}
 			// 如果没有名字，就用服务器地址作为名字
 			if ssr.Qurey.Remarks == "" {

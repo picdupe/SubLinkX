@@ -40,6 +40,8 @@ type relayRouteRequest struct {
 	Description    string `json:"description"`
 }
 
+var errRelayRouteAssigned = errors.New("route is still assigned to subscriptions; remove it from subscriptions before deleting")
+
 func RelayServersList(c *gin.Context) {
 	var servers []models.RelayServer
 	if err := models.DB.Order("id desc").Find(&servers).Error; err != nil {
@@ -450,9 +452,15 @@ func RelayRouteDelete(c *gin.Context) {
 	var task models.RelayConfigTask
 	actorID := relayActorID(c)
 	err := models.DB.Transaction(func(tx *gorm.DB) error {
-		// The port tuple is globally unique per relay server, so a deleted route must release it.
-		if err := tx.Model(&route).Association("Subscriptions").Clear(); err != nil {
-			return err
+		association := tx.Model(&route).Association("Subscriptions")
+		if association.Error != nil {
+			return association.Error
+		}
+		if association.Count() > 0 {
+			// Keep the subscription's relay selection intact. Clearing this
+			// relation would make subscription generation fall back to the raw
+			// landing node, exposing its direct address.
+			return errRelayRouteAssigned
 		}
 		if err := tx.Unscoped().Delete(&route).Error; err != nil {
 			return err
@@ -465,6 +473,10 @@ func RelayRouteDelete(c *gin.Context) {
 		return err
 	})
 	if err != nil {
+		if errors.Is(err, errRelayRouteAssigned) {
+			relayError(c, http.StatusConflict, err)
+			return
+		}
 		relayError(c, http.StatusInternalServerError, err)
 		return
 	}

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sublink/models"
 	"sublink/node"
+	"sublink/services"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -107,9 +108,29 @@ func NodeUpdadte(c *gin.Context) {
 	OldNode := &models.Node{
 		ID: index,
 	}
-	NewNode := &models.Node{
-		Name: NewName,
-		Link: Newlink,
+	var currentNode models.Node
+	if err := models.DB.First(&currentNode, index).Error; err != nil {
+		c.JSON(404, gin.H{"msg": "节点不存在"})
+		return
+	}
+	linkChanged := currentNode.Link != Newlink
+	if linkChanged {
+		var referencedRoutes []models.RelayRoute
+		if err := models.DB.Where("landing_node_id = ?", index).Find(&referencedRoutes).Error; err != nil {
+			c.JSON(500, gin.H{"msg": "检查中转线路引用失败"})
+			return
+		}
+		validatedProtocols := make(map[string]struct{}, len(referencedRoutes))
+		for _, route := range referencedRoutes {
+			if _, checked := validatedProtocols[route.Protocol]; checked {
+				continue
+			}
+			if err := services.ValidateRelayNodeLinkForProtocol(Newlink, route.Protocol); err != nil {
+				c.JSON(400, gin.H{"msg": fmt.Sprintf("节点链接不兼容中转线路 %q: %v", route.Name, err)})
+				return
+			}
+			validatedProtocols[route.Protocol] = struct{}{}
+		}
 	}
 	var gns []models.GroupNode
 	if groups != nil || len(groups) > 0 {
@@ -128,12 +149,58 @@ func NodeUpdadte(c *gin.Context) {
 		})
 		return
 	}
-	err = OldNode.UpdateNode(NewNode)
+	type queuedRelayConfig struct {
+		serverID uint
+		revision uint64
+		taskID   string
+	}
+	var queued []queuedRelayConfig
+	actorID := relayActorID(c)
+	err = models.DB.Transaction(func(tx *gorm.DB) error {
+		var current models.Node
+		if err := tx.First(&current, index).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&current).Updates(map[string]any{"name": NewName, "link": Newlink}).Error; err != nil {
+			return err
+		}
+		if !linkChanged {
+			return nil
+		}
+		var serverIDs []uint
+		if err := tx.Model(&models.RelayRoute{}).Where("landing_node_id = ? AND enabled = ?", index, true).
+			Distinct().Pluck("relay_server_id", &serverIDs).Error; err != nil {
+			return err
+		}
+		for _, serverID := range serverIDs {
+			var server models.RelayServer
+			if err := tx.First(&server, serverID).Error; err != nil {
+				return err
+			}
+			if !server.Enabled {
+				continue
+			}
+			config, err := services.RenderRelayConfig(tx, serverID)
+			if err != nil {
+				return err
+			}
+			revision, task, err := queueRelayRevision(tx, serverID, config, fmt.Sprintf("landing node %d updated", index), actorID)
+			if err != nil {
+				return err
+			}
+			queued = append(queued, queuedRelayConfig{serverID: serverID, revision: revision.Revision, taskID: task.TaskID})
+		}
+		return nil
+	})
 	if err != nil {
 		c.JSON(400, gin.H{
 			"msg": fmt.Sprintf("更新失败: %s", err.Error()),
 		})
 		return
+	}
+	for _, item := range queued {
+		recordRelayAdminEvent(c, item.serverID, "landing_node_updated", fmt.Sprintf("node_id=%d", index))
+		recordRelayAdminEvent(c, item.serverID, "config_queued", fmt.Sprintf("revision=%d task_id=%s", item.revision, item.taskID))
 	}
 
 	c.JSON(200, gin.H{
