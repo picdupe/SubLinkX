@@ -88,7 +88,10 @@ func subscriptionLinks(sub models.Subcription) ([]string, error) {
 }
 
 func subscriptionLinksWithNames(sub models.Subcription) ([]string, []string, error) {
-	hasRelaySelection := len(sub.RelayRoutes) > 0
+	originalLinks, originalNames, err := subscriptionNodeLinksWithNames(sub.Nodes)
+	if err != nil {
+		return nil, nil, err
+	}
 	routes := make([]models.RelayRoute, 0, len(sub.RelayRoutes))
 	serverIDs := make([]uint, 0, len(sub.RelayRoutes))
 	nodeIDs := make([]int, 0, len(sub.RelayRoutes))
@@ -100,10 +103,7 @@ func subscriptionLinksWithNames(sub models.Subcription) ([]string, []string, err
 		}
 	}
 	if len(routes) == 0 {
-		if hasRelaySelection {
-			return []string{}, []string{}, nil
-		}
-		return subscriptionNodeLinksWithNames(sub.Nodes)
+		return originalLinks, originalNames, nil
 	}
 	var servers []models.RelayServer
 	if err := models.DB.Where("id IN ? AND enabled = ?", serverIDs, true).Find(&servers).Error; err != nil {
@@ -121,8 +121,8 @@ func subscriptionLinksWithNames(sub models.Subcription) ([]string, []string, err
 	for _, landing := range landingNodes {
 		nodeByID[landing.ID] = landing
 	}
-	var relayLinks []string
-	var relayNames []string
+	relayLinks := make([]string, 0, len(routes))
+	relayNames := make([]string, 0, len(routes))
 	for _, route := range routes {
 		server, ok := serverByID[route.RelayServerID]
 		if !ok {
@@ -132,14 +132,15 @@ func subscriptionLinksWithNames(sub models.Subcription) ([]string, []string, err
 		if !ok {
 			continue
 		}
-		link, err := services.BuildRelaySubscriptionLink(landing.Link, server.PublicHost, route.ListenPort, route.Name, route.Protocol)
+		displayName := strings.TrimSpace(landing.Name + " " + route.Name)
+		link, err := services.BuildRelaySubscriptionLink(landing.Link, server.PublicHost, route.ListenPort, displayName, route.Protocol)
 		if err != nil {
 			return nil, nil, fmt.Errorf("派生中转线路 %q 失败: %w", route.Name, err)
 		}
 		relayLinks = append(relayLinks, link)
-		relayNames = append(relayNames, route.Name)
+		relayNames = append(relayNames, displayName)
 	}
-	return relayLinks, relayNames, nil
+	return append(originalLinks, relayLinks...), append(originalNames, relayNames...), nil
 }
 
 func subscriptionNodeLinks(nodes []models.Node) ([]string, error) {

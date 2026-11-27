@@ -112,7 +112,7 @@ export default {
     accessLog: "访问记录", totalVisits: "总访问次数", source: "来源", recentTime: "最近时间", templateSelect: "{client} 模板选择",
     local: "本地", url: "URL 链接", templateFile: "{client} 模板文件", forceOptions: "强制开启选项", skipCertificate: "跳过证书",
     realityKem: "VLESS Reality：启用 X25519MLKEM768", chooseNodes: "选择已有的节点列表", chooseNodePlaceholder: "请选择已有节点",
-    selectedNodes: "已选节点（可拖拽排序）", chooseRelayRoutes: "选择已有的中转线路",
+    selectedNodes: "已选节点（可拖拽排序）", chooseRelayRoutes: "选择已有的中转线路", selectedRelayNodes: "已选中转节点",
     relayPlaceholder: "请先选择节点；仅显示这些节点对应的可发布线路",
     nameNode: "订阅名称 / 节点", link: "链接", client: "客户端", createdAt: "创建时间", actions: "操作", logs: "记录", unknownEndpoint: "未知入口",
   },

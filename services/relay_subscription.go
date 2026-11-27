@@ -14,7 +14,7 @@ import (
 
 // BuildRelaySubscriptionLink returns a copy of a node link pointed at a relay
 // listener. The original node link is never modified.
-func BuildRelaySubscriptionLink(link, relayHost string, relayPort uint16, routeName, protocol string) (string, error) {
+func BuildRelaySubscriptionLink(link, relayHost string, relayPort uint16, displayName, protocol string) (string, error) {
 	var host string
 	var err error
 	if protocol == "udp" {
@@ -41,7 +41,7 @@ func BuildRelaySubscriptionLink(link, relayHost string, relayPort uint16, routeN
 			return "", errors.New("invalid UDP node URI")
 		}
 		u.Host = net.JoinHostPort(relayHost, port)
-		u.Fragment = relayDisplayName(u.Fragment, routeName)
+		u.Fragment = displayName
 		return u.String(), nil
 	}
 	switch scheme {
@@ -50,44 +50,29 @@ func BuildRelaySubscriptionLink(link, relayHost string, relayPort uint16, routeN
 		if err != nil {
 			return "", errors.New("invalid node URI")
 		}
-		name := u.Fragment
 		u.Host = net.JoinHostPort(relayHost, port)
-		u.Fragment = relayDisplayName(name, routeName)
+		u.Fragment = displayName
 		return u.String(), nil
 	case "vmess":
-		return relayVMessLink(link, relayHost, port, routeName)
+		return relayVMessLink(link, relayHost, port, displayName)
 	case "ss":
-		return relaySSLink(link, relayHost, port, routeName)
+		return relaySSLink(link, relayHost, port, displayName)
 	case "ssr":
-		return relaySSRLink(link, relayHost, port, routeName)
+		return relaySSRLink(link, relayHost, port, displayName)
 	default:
 		return "", fmt.Errorf("node protocol %q cannot be derived for a relay subscription", scheme)
 	}
 }
 
-func relayDisplayName(original, route string) string {
-	original = strings.TrimSpace(original)
-	route = strings.TrimSpace(route)
-	if original == "" {
-		return route
-	}
-	if route == "" {
-		return original
-	}
-	return original + " - " + route
-}
-
-func relayVMessLink(link, relayHost, relayPort, routeName string) (string, error) {
+func relayVMessLink(link, relayHost, relayPort, displayName string) (string, error) {
 	payload := node.Base64Decode(strings.TrimPrefix(link, "vmess://"))
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(payload), &fields); err != nil {
 		return "", errors.New("invalid VMess link")
 	}
-	var originalName string
-	_ = json.Unmarshal(fields["ps"], &originalName)
 	fields["add"], _ = json.Marshal(relayHost)
 	fields["port"], _ = json.Marshal(relayPort)
-	fields["ps"], _ = json.Marshal(relayDisplayName(originalName, routeName))
+	fields["ps"], _ = json.Marshal(displayName)
 	updated, err := json.Marshal(fields)
 	if err != nil {
 		return "", err
@@ -95,12 +80,11 @@ func relayVMessLink(link, relayHost, relayPort, routeName string) (string, error
 	return "vmess://" + node.Base64Encode(string(updated)), nil
 }
 
-func relaySSLink(link, relayHost, relayPort, routeName string) (string, error) {
+func relaySSLink(link, relayHost, relayPort, displayName string) (string, error) {
 	u, err := url.Parse(link)
 	if err != nil {
 		return "", errors.New("invalid Shadowsocks link")
 	}
-	originalName := u.Fragment
 	userInfo := ""
 	query := u.RawQuery
 	if u.User != nil && u.Port() != "" {
@@ -115,9 +99,6 @@ func relaySSLink(link, relayHost, relayPort, routeName string) (string, error) {
 		if query == "" {
 			query = legacy.RawQuery
 		}
-		if originalName == "" {
-			originalName = legacy.Fragment
-		}
 	}
 	decodedUserInfo := node.Base64Decode(userInfo)
 	if strings.Contains(decodedUserInfo, ":") {
@@ -127,20 +108,18 @@ func relaySSLink(link, relayHost, relayPort, routeName string) (string, error) {
 	if query != "" {
 		suffix = "?" + query
 	}
-	return "ss://" + userInfo + "@" + net.JoinHostPort(relayHost, relayPort) + suffix + "#" + url.QueryEscape(relayDisplayName(originalName, routeName)), nil
+	return "ss://" + userInfo + "@" + net.JoinHostPort(relayHost, relayPort) + suffix + "#" + url.QueryEscape(displayName), nil
 }
 
-func relaySSRLink(link, relayHost, relayPort, routeName string) (string, error) {
+func relaySSRLink(link, relayHost, relayPort, displayName string) (string, error) {
 	decoded := node.Base64Decode(strings.TrimPrefix(link, "ssr://"))
-	parsed, err := node.DecodeSSRURL(link)
-	if err != nil {
+	if _, err := node.DecodeSSRURL(link); err != nil {
 		return "", errors.New("invalid ShadowsocksR link")
 	}
 	addressEnd, err := ssrAddressEnd(decoded)
 	if err != nil {
 		return "", err
 	}
-	displayName := relayDisplayName(parsed.Qurey.Remarks, routeName)
 	parts := strings.SplitN(decoded, "/?", 2)
 	query := url.Values{}
 	if len(parts) == 2 {

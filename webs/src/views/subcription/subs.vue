@@ -90,10 +90,18 @@ const availableRelayRoutes = computed(() => {
     item.enabled && item.publish_enabled && enabledServers.has(item.relay_server_id) && selectedNodeIDs.value.has(item.landing_node_id)
   )
 })
-watch(value1, () => {
-  const eligibleIDs = new Set(availableRelayRoutes.value.map((item) => item.ID))
-  selectedRelayRouteIDs.value = selectedRelayRouteIDs.value.filter((id) => eligibleIDs.has(id))
-}, { deep: true })
+const selectableRelayRoutes = computed(() => {
+  const selectedIDs = new Set(selectedRelayRouteIDs.value)
+  const routes = new Map<number, RelayRoute>()
+  for (const route of availableRelayRoutes.value) routes.set(route.ID, route)
+  for (const route of relayRouteList.value) {
+    if (selectedIDs.has(route.ID)) routes.set(route.ID, route)
+  }
+  return [...routes.values()]
+})
+const selectedRelayRoutes = computed(() => selectedRelayRouteIDs.value
+  .map((id) => relayRouteList.value.find((route) => route.ID === id))
+  .filter((route): route is RelayRoute => Boolean(route)))
 watch(canConfigureRealityKem, (canConfigure) => {
   if (!canConfigure) {
     checkList.value = checkList.value.filter((item) => item !== 'support_x25519mlkem768')
@@ -102,6 +110,13 @@ watch(canConfigureRealityKem, (canConfigure) => {
 function relayRouteLabel(route: RelayRoute) {
   const server = relayServerList.value.find((item) => item.ID === route.relay_server_id)
   return `${route.name} — ${server?.name || `#${route.relay_server_id}`} (${server?.public_host || t('subscriptions.unknownEndpoint')}:${route.listen_port})`
+}
+function relayNodeName(route: RelayRoute) {
+  const landingNode = NodesList.value.find((item) => item.ID === route.landing_node_id)
+  return `${landingNode?.Name || `#${route.landing_node_id}`} ${route.name}`.trim()
+}
+function removeRelayRoute(routeID: number) {
+  selectedRelayRouteIDs.value = selectedRelayRouteIDs.value.filter((id) => id !== routeID)
 }
 const checkList = ref<string[]>([]) // 配置列表
 const iplogsdialog = ref(false)
@@ -231,16 +246,9 @@ const handleEdit = (row:any) => {
       Clash.value = config.clash
       Surge.value = config.surge
       dialogVisible.value = true
-      const selectedNames = new Set(tableData.value[i].Nodes.map((item) => item.Name))
-      for (const route of tableData.value[i].RelayRoutes || []) {
-        const landingNode = NodesList.value.find((item) => item.ID === route.landing_node_id)
-        if (landingNode) selectedNames.add(landingNode.Name)
-      }
-      value1.value = [...selectedNames]
-      const eligibleIDs = new Set(availableRelayRoutes.value.map((item) => item.ID))
+      value1.value = tableData.value[i].Nodes.map((item) => item.Name)
       selectedRelayRouteIDs.value = (tableData.value[i].RelayRoutes || [])
         .map((item) => item.ID)
-        .filter((id) => eligibleIDs.has(id))
     }
   }
 }
@@ -524,13 +532,17 @@ const toggleSelect = (name: string) => {
       style="width: 100%"
     >
       <el-option
-        v-for="route in availableRelayRoutes"
+        v-for="route in selectableRelayRoutes"
         :key="route.ID"
         :label="relayRouteLabel(route)"
         :value="route.ID"
       />
     </el-select>
-
+    <p>{{ t('subscriptions.selectedRelayNodes') }}</p>
+    <div v-for="(route, index) in selectedRelayRoutes" :key="route.ID" class="draggable-item relay-derived-item">
+      <span><span class="row-number">{{ index + 1 }}.</span> {{ relayNodeName(route) }}</span>
+      <el-button link type="danger" size="small" @click="removeRelayRoute(route.ID)">{{ t('common.delete') }}</el-button>
+    </div>
 
   </div>
     <template #footer>

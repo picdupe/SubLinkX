@@ -112,7 +112,7 @@ export default {
     accessLog: "Access log", totalVisits: "Total visits", source: "Source", recentTime: "Recent time", templateSelect: "Select {client} template",
     local: "Local", url: "URL", templateFile: "{client} template file", forceOptions: "Force options", skipCertificate: "Skip certificate verification",
     realityKem: "VLESS Reality: enable X25519MLKEM768", chooseNodes: "Select existing nodes", chooseNodePlaceholder: "Select nodes",
-    selectedNodes: "Selected nodes (drag to reorder)", chooseRelayRoutes: "Select relay routes",
+    selectedNodes: "Selected nodes (drag to reorder)", chooseRelayRoutes: "Select relay routes", selectedRelayNodes: "Selected relay nodes",
     relayPlaceholder: "Select nodes first; only publishable routes for those nodes are shown",
     nameNode: "Subscription / node", link: "Link", client: "Client", createdAt: "Created at", actions: "Actions", logs: "Logs", unknownEndpoint: "Unknown endpoint",
   },

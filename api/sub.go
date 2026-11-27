@@ -91,10 +91,6 @@ func SubAdd(c *gin.Context) {
 		// 插入nodes
 		NodesData = append(NodesData, FirstNode)
 	}
-	if err := validateRelayRouteCoverage(NodesData, relayRoutes); err != nil {
-		c.JSON(400, gin.H{"msg": err.Error()})
-		return
-	}
 	sub := models.Subcription{
 		Name:        name,
 		Config:      configs,   // 这里直接赋值字符串
@@ -260,10 +256,6 @@ func SubUpdate(c *gin.Context) {
 		// 插入nodes
 		NodesData = append(NodesData, FirstNode)
 	}
-	if err := validateRelayRouteCoverage(NodesData, relayRoutes); err != nil {
-		c.JSON(400, gin.H{"msg": err.Error()})
-		return
-	}
 	OldSub := models.Subcription{
 		Name: OldName,
 	}
@@ -287,34 +279,6 @@ func SubUpdate(c *gin.Context) {
 		"code": "00000",
 		"msg":  "更新订阅成功",
 	})
-}
-
-func validateRelayRouteCoverage(nodes []models.Node, routes []models.RelayRoute) error {
-	if len(routes) == 0 || len(nodes) == 0 {
-		return nil
-	}
-	covered := make(map[int]struct{}, len(routes))
-	for _, route := range routes {
-		covered[route.LandingNodeID] = struct{}{}
-	}
-	for _, n := range nodes {
-		if _, ok := covered[n.ID]; !ok {
-			return errors.New("已选择中转线路时，订阅中的每个原始节点都必须选择对应的中转线路")
-		}
-	}
-	for _, route := range routes {
-		found := false
-		for _, n := range nodes {
-			if n.ID == route.LandingNodeID {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return errors.New("所选中转线路对应的原始节点必须先加入订阅")
-		}
-	}
-	return nil
 }
 
 func selectedRelayRoutes(raw string) ([]models.RelayRoute, error) {
