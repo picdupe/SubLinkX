@@ -70,13 +70,22 @@ const table = ref()
 const NodesList = ref<Node[]>([])
 const relayRouteList = ref<RelayRoute[]>([])
 const relayServerList = ref<RelayServer[]>([])
+// The picker controls route matching. The final original-node list can be
+// edited independently; removing a picker selection removes dependent relays.
 const value1 = ref<string[]>([])
+const selectedOutputNodeNames = ref<string[]>([])
+const previousSourceNodeNames = ref<string[]>([])
 const selectedRelayRouteIDs = ref<number[]>([])
 const selectedNodeIDs = computed(() => new Set(
   NodesList.value.filter((item) => value1.value.includes(item.Name)).map((item) => item.ID)
 ))
 const canConfigureRealityKem = computed(() => NodesList.value.some((item) => {
-  if (!value1.value.includes(item.Name)) return false
+  const includedByOriginal = selectedOutputNodeNames.value.includes(item.Name)
+  const includedByRelay = selectedRelayRouteIDs.value.some((routeID) => {
+    const route = relayRouteList.value.find((candidate) => Number(candidate.ID) === Number(routeID))
+    return Number(route?.landing_node_id) === Number(item.ID)
+  })
+  if (!includedByOriginal && !includedByRelay) return false
   try {
     const uri = new URL(item.Link.trim())
     return uri.protocol === 'vless:' && uri.searchParams.get('security')?.toLowerCase() === 'reality'
@@ -100,7 +109,7 @@ const selectableRelayRoutes = computed(() => {
   return [...routes.values()]
 })
 const selectedRelayRoutes = computed(() => selectedRelayRouteIDs.value
-  .map((id) => relayRouteList.value.find((route) => route.ID === id))
+  .map((id) => relayRouteList.value.find((route) => Number(route.ID) === Number(id)))
   .filter((route): route is RelayRoute => Boolean(route)))
 watch(canConfigureRealityKem, (canConfigure) => {
   if (!canConfigure) {
@@ -116,7 +125,50 @@ function relayNodeName(route: RelayRoute) {
   return `${landingNode?.Name || `#${route.landing_node_id}`} ${route.name}`.trim()
 }
 function removeRelayRoute(routeID: number) {
-  selectedRelayRouteIDs.value = selectedRelayRouteIDs.value.filter((id) => id !== routeID)
+  const route = relayRouteList.value.find((item) => Number(item.ID) === Number(routeID))
+  selectedRelayRouteIDs.value = selectedRelayRouteIDs.value.filter((id) => Number(id) !== Number(routeID))
+  if (route) {
+    const landingNode = NodesList.value.find((node) => Number(node.ID) === Number(route.landing_node_id))
+    if (landingNode) pruneUnusedOriginalSelections([landingNode.Name])
+  }
+}
+function removeRelayRoutesForOriginalNodes(nodeNames: string[]) {
+  const nodeIDs = new Set(NodesList.value
+    .filter((node) => nodeNames.includes(node.Name))
+    .map((node) => Number(node.ID)))
+  if (nodeIDs.size === 0) return
+  selectedRelayRouteIDs.value = selectedRelayRouteIDs.value.filter((routeID) => {
+    const route = relayRouteList.value.find((item) => Number(item.ID) === Number(routeID))
+    return !route || !nodeIDs.has(Number(route.landing_node_id))
+  })
+}
+function removeOriginalNode(nodeName: string) {
+  selectedOutputNodeNames.value = selectedOutputNodeNames.value.filter((name) => name !== nodeName)
+  pruneUnusedOriginalSelections([nodeName])
+}
+function pruneUnusedOriginalSelections(nodeNames: string[]) {
+  const unusedNames = nodeNames.filter((nodeName) => {
+    if (selectedOutputNodeNames.value.includes(nodeName)) return false
+    const node = NodesList.value.find((item) => item.Name === nodeName)
+    if (!node) return true
+    return !selectedRelayRouteIDs.value.some((routeID) => {
+      const route = relayRouteList.value.find((item) => Number(item.ID) === Number(routeID))
+      return Number(route?.landing_node_id) === Number(node.ID)
+    })
+  })
+  if (unusedNames.length === 0) return
+  value1.value = value1.value.filter((name) => !unusedNames.includes(name))
+  previousSourceNodeNames.value = previousSourceNodeNames.value.filter((name) => !unusedNames.includes(name))
+}
+function syncSelectedOriginalNodes(nodeNames: string[]) {
+  const addedNames = nodeNames.filter((name) => !previousSourceNodeNames.value.includes(name))
+  const removedNames = previousSourceNodeNames.value.filter((name) => !nodeNames.includes(name))
+  selectedOutputNodeNames.value = [
+    ...selectedOutputNodeNames.value.filter((name) => !removedNames.includes(name)),
+    ...addedNames.filter((name) => !selectedOutputNodeNames.value.includes(name)),
+  ]
+  removeRelayRoutesForOriginalNodes(removedNames)
+  previousSourceNodeNames.value = [...nodeNames]
 }
 const checkList = ref<string[]>([]) // 配置列表
 const iplogsdialog = ref(false)
@@ -160,7 +212,7 @@ const addSubs = async ()=>{
     await AddSub({
       config: config,
       name: Subname.value.trim(),
-      nodes: value1.value.join(','),
+      nodes: selectedOutputNodeNames.value.join(','),
       relay_routes: selectedRelayRouteIDs.value.join(',')
     })
     getsubs()
@@ -169,7 +221,7 @@ const addSubs = async ()=>{
     await UpdateSub({
       config: config,
       name: Subname.value.trim(),
-      nodes: value1.value.join(','),
+      nodes: selectedOutputNodeNames.value.join(','),
       relay_routes: selectedRelayRouteIDs.value.join(','),
       oldname: oldSubname.value
     })
@@ -216,6 +268,8 @@ const handleAddSub = ()=>{
   Surge.value = './template/surge.conf'
   dialogVisible.value = true
   value1.value = []
+  previousSourceNodeNames.value = []
+  selectedOutputNodeNames.value = []
   selectedRelayRouteIDs.value = []
 }
 
@@ -246,9 +300,14 @@ const handleEdit = (row:any) => {
       Clash.value = config.clash
       Surge.value = config.surge
       dialogVisible.value = true
-      value1.value = tableData.value[i].Nodes.map((item) => item.Name)
-      selectedRelayRouteIDs.value = (tableData.value[i].RelayRoutes || [])
-        .map((item) => item.ID)
+      selectedOutputNodeNames.value = tableData.value[i].Nodes.map((item) => item.Name)
+      const selectedRoutes = tableData.value[i].RelayRoutes || []
+      const relayLandingNodeNames = selectedRoutes
+        .map((route) => NodesList.value.find((item) => Number(item.ID) === Number(route.landing_node_id))?.Name)
+        .filter((name): name is string => Boolean(name))
+      value1.value = [...new Set([...selectedOutputNodeNames.value, ...relayLandingNodeNames])]
+      previousSourceNodeNames.value = [...value1.value]
+      selectedRelayRouteIDs.value = selectedRoutes.map((item) => item.ID)
     }
   }
 }
@@ -506,6 +565,7 @@ const toggleSelect = (name: string) => {
     <el-select
       v-model="value1"
       multiple
+      @change="syncSelectedOriginalNodes"
       :placeholder="t('subscriptions.chooseNodePlaceholder')"
       style="width: 100%"
     >
@@ -517,9 +577,10 @@ const toggleSelect = (name: string) => {
       />
     </el-select>
     <p>{{ t('subscriptions.selectedNodes') }}</p>
-    <VueDraggable v-model="value1" :animation="150" ghost-class="ghost">
-      <div v-for="(nodeName, index) in value1" :key="nodeName" class="draggable-item">
-        <span class="row-number">{{ index + 1 }}.</span> {{ nodeName }}
+    <VueDraggable v-model="selectedOutputNodeNames" :animation="150" ghost-class="ghost">
+      <div v-for="(nodeName, index) in selectedOutputNodeNames" :key="nodeName" class="draggable-item">
+        <span class="draggable-item-name"><span class="row-number">{{ index + 1 }}.</span> {{ nodeName }}</span>
+        <el-tag type="info" closable style="display: contents" @close="removeOriginalNode(nodeName)"></el-tag>
       </div>
     </VueDraggable>
 
@@ -527,7 +588,6 @@ const toggleSelect = (name: string) => {
     <el-select
       v-model="selectedRelayRouteIDs"
       multiple
-      clearable
       :placeholder="t('subscriptions.relayPlaceholder')"
       style="width: 100%"
     >
@@ -540,8 +600,8 @@ const toggleSelect = (name: string) => {
     </el-select>
     <p>{{ t('subscriptions.selectedRelayNodes') }}</p>
     <div v-for="(route, index) in selectedRelayRoutes" :key="route.ID" class="draggable-item relay-derived-item">
-      <span><span class="row-number">{{ index + 1 }}.</span> {{ relayNodeName(route) }}</span>
-      <el-button link type="danger" size="small" @click="removeRelayRoute(route.ID)">{{ t('common.delete') }}</el-button>
+      <span class="draggable-item-name"><span class="row-number">{{ index + 1 }}.</span> {{ relayNodeName(route) }}</span>
+      <el-tag type="info" closable style="display: contents" @close="removeRelayRoute(route.ID)"></el-tag>
     </div>
 
   </div>
@@ -663,6 +723,11 @@ const toggleSelect = (name: string) => {
 
 .draggable-item:hover {
   background-color: #e6e8eb;
+}
+
+.draggable-item-name {
+  flex: 1;
+  min-width: 0;
 }
 
 .ghost {
