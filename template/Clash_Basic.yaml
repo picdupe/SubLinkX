@@ -8,11 +8,13 @@ external-controller: 127.0.0.1:9090
 proxies: []
 
 proxy-groups:
-  # 自定义全局组：只包含真实代理节点，不包含其他策略组
+  # 全局组
   - name: GLOBAL
     type: select
+    proxies:
+      - Proxies
 
-  # 日常分流使用的代理组
+  # 代理组
   - name: Proxies
     type: select
     proxies: []
