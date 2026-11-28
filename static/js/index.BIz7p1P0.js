@@ -1,1 +1,0 @@
-import{h as e,bt as s,a}from"./index.D243PJp7.js";const t=({from:t,replacement:i,scope:o,version:r,ref:n,type:p="API"},m)=>{e(()=>a(m),e=>{e&&s(o,`[${p}] ${t} is about to be deprecated in version ${r}, please use ${i} instead.\nFor more detail, please visit: ${n}\n`)},{immediate:!0})};export{t as u};

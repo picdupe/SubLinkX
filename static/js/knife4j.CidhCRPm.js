@@ -1,0 +1,1 @@
+import{a8 as a,o as t,Y as e,Z as r}from"./index.Boa4OQzi.js";const o={class:"app-container"};const s=a({},[["render",function(a,s){return t(),e("div",o,[...s[0]||(s[0]=[r("iframe",{src:"http://vapi.youlai.tech/doc.html",width:"100%",height:"100%",frameborder:"0"},null,-1)])])}],["__scopeId","data-v-f4490f0d"]]);export{s as default};
